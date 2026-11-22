@@ -36,6 +36,7 @@
   xpctl.py disc [E:]          Label, Wurzel, Kopierschutz-Dateien, PE-Sektionen der Exes
   xpctl.py setupapi [-g TEXT] [--last N]   letzte Treiberinstallationen aus setupapi.log
   xpctl.py uninstall NAME [--run]          Uninstall-Eintrag zeigen, mit --run Deinstaller starten
+  xpctl.py ver DATEI...                    VERSIONINFO, Größe, Datum, md5
 
 Host: --host oder XPCTL_HOST (Pflicht), Port 5050 (XPCTL_PORT).
 Passwort: XPCTL_KEY oder die Datei aus XPCTL_KEY_FILE (Standard: Datei "key" im Ordner xpctl der Benutzer-Konfiguration).
@@ -1046,6 +1047,23 @@ def cmd_uninstall(sock, args):
 
 
 
+def cmd_ver(sock, args):
+    r = rpc(sock, {"op": "ver", "paths": args.paths})
+    if r is None:
+        return 1
+    for p, v in r["files"].items():
+        if v.get("error"):
+            print(f"{p}: Fehler {v['error']}")
+            continue
+        st = v.get("strings") or {}
+        print(f"{p}\n  Datei {v.get('file_version') or '-'}  Produkt {v.get('product_version') or '-'}  "
+              f"{v.get('size')} B  {v.get('date')}  md5 {v.get('md5') or '-'}")
+        for k in ("ProductName", "FileDescription", "CompanyName", "FileVersion", "ProductVersion"):
+            if st.get(k):
+                print(f"  {k}: {st[k]}")
+    return 0
+
+
 def _label_norm(s):
     return " ".join(s.replace("&", "").split()).lower()
 
@@ -1287,6 +1305,10 @@ def main() -> int:
     p.add_argument("drive", nargs="?", help="CD-Laufwerk (Standard wie bei eject)")
     p.add_argument("--db", help="Kopierschutz-Datenbank (Standard: disc-protection.json neben xpctl.py)")
     p.set_defaults(fn=cmd_disc)
+
+    p = sub.add_parser("ver", help="Version/Größe/Datum/md5 von Exe- und DLL-Dateien")
+    p.add_argument("paths", nargs="+")
+    p.set_defaults(fn=cmd_ver)
 
     p = sub.add_parser("uninstall", help="Programm deinstallieren (Uninstall-Eintrag), Dialoge danach per press")
     p.add_argument("name", help="Teil von Anzeigename oder Schlüssel")

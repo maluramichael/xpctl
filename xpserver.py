@@ -2869,6 +2869,17 @@ def op_uninstall(sock, req):
     return {"ok": True, "entries": info, "started": cmd}
 
 
+def op_ver(sock, req):
+    """VERSIONINFO, Größe, Datum, md5 beliebiger Exe/DLL-Dateien."""
+    out = {}
+    for p in req["paths"]:
+        try:
+            out[p] = exe_version(p)
+        except Exception as e:
+            out[p] = {"error": str(e)}
+    return {"ok": True, "files": out}
+
+
 OPS = {"ping": op_ping, "run": op_run, "put": op_put, "get": op_get, "update": op_update,
        "ui": op_ui, "shot": op_shot, "click": op_click, "press": op_press,
        "settext": op_settext, "key": op_key, "type": op_type, "focus": op_focus,
@@ -2879,7 +2890,7 @@ OPS = {"ping": op_ping, "run": op_run, "put": op_put, "get": op_get, "update": o
        "ripiso": op_ripiso, "pesec": op_pesec, "driver": op_driver,
        "games": op_games, "ls": op_ls, "cat": op_cat, "ps": op_ps, "kill": op_kill,
        "hash": op_hash, "copy": op_copy, "rm": op_rm, "disc": op_disc, "setupapi": op_setupapi,
-       "uninstall": op_uninstall}
+       "uninstall": op_uninstall, "ver": op_ver}
 
 
 def describe(req):

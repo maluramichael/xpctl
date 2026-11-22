@@ -93,6 +93,7 @@ Client und Umgebung:
     ./xpctl.py settings [--only region,users] [--paths]
     ./xpctl.py setupapi [-g TEXT] [--last N]   # letzte Treiberinstallationen
     ./xpctl.py uninstall NAME [--run]          # Uninstall-Eintrag zeigen, mit --run Deinstaller starten
+    ./xpctl.py ver DATEI...                    # VERSIONINFO, Größe, Datum, md5 von Exe/DLL
     ./xpctl.py productkey --out DATEI          # nur in Datei, im Terminal nur "Format ok (5x5)"
 
 `settings` zeigt je Eintrag den Ist-Wert und, wenn bekannt, die Bedeutung. Abschnitte: `explorer design region users quiet network gaming hardware`. Kennwörter werden nie ausgegeben, nur "hinterlegt: ja/nein". HKCU ist der Benutzer, unter dem der Server läuft. Nicht gesetzte Werte heißen "Windows-Standard", nicht "aus".
