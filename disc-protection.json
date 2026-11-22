@@ -343,6 +343,20 @@
    "alcohol_datatype": "StarForce",
    "notes": "StarForce nie unter Vista oder neuer installieren; Patch 1.51 vor dem ersten Start",
    "verified": false
+  },
+  {
+   "game": "Emperor: Schlacht um Dune",
+   "year": 2001,
+   "disc": [
+    "CD 1"
+   ],
+   "label": "EMPEROR1",
+   "lang": "de",
+   "protection": "SafeDisc 2",
+   "evidence": "00000001.TMP, 00000002.TMP, drvmgt.dll, secdrv.sys auf der Disc",
+   "image": "MDF/MDS",
+   "notes": "CD 2 bis 4 sind die Kampagnen-Discs der Häuser",
+   "verified": true
   }
  ]
 }
