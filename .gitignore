@@ -1,0 +1,7 @@
+__pycache__/
+*.key
+*.log
+*.bak
+*.part
+xpserver.json
+desktop-gruppen.txt

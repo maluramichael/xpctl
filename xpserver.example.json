@@ -1,0 +1,10 @@
+{
+  "allow": ["192.168.1.0/24"],
+  "rm_roots": ["D:\\Spiele", "D:\\Temp"],
+  "games_dir": "D:\\Spiele",
+  "cd_drive": "E:",
+  "image_drive": "G:",
+  "alcohol_axcmd": "D:\\Programme\\Alcohol\\AxCmd.exe",
+  "launcher_script": "D:\\Spiele\\Launcher\\launch.vbs",
+  "launcher_backup_dir": "D:\\Spiele\\Launcher\\backup"
+}

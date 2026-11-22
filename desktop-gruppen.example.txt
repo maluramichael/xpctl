@@ -1,0 +1,140 @@
+# Beispiel für Desktop-Gruppen: `xpctl.py desk group --map DATEI` (oder XPCTL_GROUPS) schickt die Datei an den Server.
+# [Ordner], icon=<Datei,Index> oder icon=@<Verknüpfung>, danach je Zeile ein Namensanfang (längster gewinnt).
+
+[Strategie]
+icon=@Warcraft III - Frozen Throne
+Age of Empires
+Age of Wonders
+Battle Realms
+Civilization
+Command & Conquer
+C&C
+Alarmstufe
+Tiberian
+Star Wars - Force Commander
+Commandos
+Cossacks
+Dungeon Keeper
+Earth 2150
+Emperor - Schlacht um Dune
+Empire Earth
+StarCraft
+Starship Troopers
+Stronghold
+The Conquerors
+Warcraft
+
+[Aufbau]
+icon=@The Settlers 2 GOLD
+Anno
+Caesar
+Cultures
+Diggles
+Black & White
+Emperor - Rise
+Pharaoh
+SimCity
+Space Colony
+StarTopia
+The Nations
+The Settlers
+Tropico
+Zeus
+
+[Wirtschaft]
+icon=@RollerCoaster Tycoon Deluxe
+Airline Tycoon
+Freight Tycoon
+Gangsters
+Hotel Giant
+Industry Giant
+Patrician
+Pizza Connection
+Start-Up
+Port Royale
+RollerCoaster
+The Guild
+Theme Hospital
+Traffic Giant
+Transport Giant
+Zoo Tycoon
+
+[Shooter]
+icon=@DOOM II with Master Levels
+DOOM
+The Ultimate DOOM
+Daikatana
+Far Cry
+Play UT2004
+Quake
+Red Faction
+Serious Sam
+Star Wars - Jedi Knight II
+Star Wars Jedi Knight
+Unreal
+
+[Action]
+icon=@GTA Vice City
+Nocturne
+Oni
+Slave Zero
+Enter the Matrix
+Freespace
+GTA
+Hitman
+Mafia
+Max Payne
+Rayman
+Thief
+Tom Clancy
+Tonic Trouble
+Urban Chaos
+
+[Rollenspiele]
+icon=@Gothic
+Diablo
+Divine Divinity
+Gothic
+Neverwinter
+Nox
+Sacred
+Septerra
+Star Wars - Knights
+
+[Rennen]
+icon=@FlatOut 2
+3D Ultra RC Racers
+Bleifuss
+Midtown Madness
+Tony Hawk
+Need for Speed
+Driver
+FlatOut
+Motocross Madness
+NFS
+Re-Volt
+TmNations
+Trickstyle
+
+[Kleinspiele]
+icon=@Sumpfhuhn 3
+3D Ultra MiniGolf
+Blobby Volley
+Cannon Hill
+Gruntz
+Icy Tower
+Liero
+Pulleralarm
+Robo Rumble
+Battle Beast
+Soldat
+Street Wars
+Sumpfhuhn
+Wilkanoid
+
+[Tools]
+icon=@SpeedFan
+3DMark
+Alcohol
+Mozilla Firefox
+SpeedFan
