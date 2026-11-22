@@ -1,0 +1,348 @@
+{
+ "_doc": "Kopierschutz je Original-Disc (Label = Volume-Name). protection 'keiner' = ISO reicht. image/alcohol_datatype = womit sich die Disc startfähig abbilden ließ. verified=false: angenommen, nicht getestet. xpctl disc zeigt den Eintrag zum eingelegten Label.",
+ "discs": [
+  {
+   "game": "Command & Conquer: Alarmstufe Rot 2",
+   "year": 2000,
+   "disc": [
+    "Alliierte"
+   ],
+   "label": "RA1",
+   "lang": "de",
+   "protection": "SafeDisc 2",
+   "evidence": "00000001.TMP, 00000002.TMP, secdrv.sys auf der Disc",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SafeDisc 2/3/4",
+   "verified": true
+  },
+  {
+   "game": "Command & Conquer: Alarmstufe Rot 2",
+   "year": 2000,
+   "disc": [
+    "Sowjets"
+   ],
+   "label": "RA2",
+   "lang": "de",
+   "protection": "SafeDisc 2",
+   "evidence": "00000001.TMP, 00000002.TMP, secdrv.sys auf der Disc",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SafeDisc 2/3/4",
+   "verified": true
+  },
+  {
+   "game": "Command & Conquer: Alarmstufe Rot 2",
+   "year": 2000,
+   "disc": [
+    "Documents (Handbücher)"
+   ],
+   "label": "RA2_MANUALS",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "Command & Conquer: Tiberian Sun",
+   "year": 1999,
+   "disc": [
+    "GDI"
+   ],
+   "label": "TS1",
+   "lang": "de",
+   "protection": "SafeDisc 1",
+   "evidence": "SafeDisc-1-Dateien, fremde ISOs ohne Fehlersektoren starten nicht",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SafeDisc",
+   "notes": "8x, Lesefehler ignorieren + schnell überspringen",
+   "verified": true
+  },
+  {
+   "game": "Command & Conquer: Tiberian Sun",
+   "year": 1999,
+   "disc": [
+    "NOD"
+   ],
+   "label": "TS2",
+   "lang": "de",
+   "protection": "SafeDisc 1",
+   "evidence": "wie GDI",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SafeDisc",
+   "verified": true
+  },
+  {
+   "game": "Max Payne",
+   "year": 2001,
+   "disc": [
+    "CD"
+   ],
+   "label": "Max Payne",
+   "lang": "de",
+   "protection": "SafeDisc 2",
+   "evidence": "00000001.TMP, drvmgt.dll, secdrv.sys; Exe-Sektionen stxt774/stxt371",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SafeDisc 2/3/4",
+   "notes": "6x; Start vom gemounteten Image ohne Zusatz-Emulation",
+   "verified": true
+  },
+  {
+   "game": "Tony Hawk's Pro Skater 3",
+   "year": 2002,
+   "disc": [
+    "CD"
+   ],
+   "label": "Thps 3 GM",
+   "lang": "de",
+   "protection": "SafeDisc 2",
+   "evidence": "Meldung 'CD copy protection check failed' mit ISO",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SafeDisc 2/3/4",
+   "notes": "8x, Lesefehler ignorieren + schnell überspringen",
+   "verified": true
+  },
+  {
+   "game": "Tony Hawk's Pro Skater 2",
+   "year": 2000,
+   "disc": [
+    "CD"
+   ],
+   "label": "THPS2",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien, THawk2.exe nur Standard-Sektionen",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "GTA III",
+   "year": 2002,
+   "disc": [
+    "Install"
+   ],
+   "label": "GTAIII",
+   "lang": "de",
+   "protection": "keiner (Disc)",
+   "evidence": "keine Schutzdateien auf der Disc",
+   "image": "ISO",
+   "notes": "Trilogy-Box-Pressung",
+   "verified": true
+  },
+  {
+   "game": "GTA III",
+   "year": 2002,
+   "disc": [
+    "Play"
+   ],
+   "label": "GTA3_AUDIO",
+   "lang": "de",
+   "protection": "SecuROM",
+   "evidence": "Schutz nur in der installierten gta3.exe (Sektionen .trenz/.espom, drvmgt.dll); mit ISO 'Please insert the original disc instead of a backup'",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SecuROM NEW 4/5/7",
+   "notes": "RAW+SUB-96, DPM hoch 16x; lief ohne A.C.I.D.",
+   "verified": true
+  },
+  {
+   "game": "GTA Vice City",
+   "year": 2003,
+   "disc": [
+    "DVD"
+   ],
+   "label": "GTA Vice City",
+   "lang": "de",
+   "protection": "SecuROM 7",
+   "evidence": "gta-vc.exe mit Sektionen credo/absurdum/quia/.securom",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SecuROM",
+   "notes": "DPM hoch 12x; erkennt das Alcohol-Laufwerk, Start nur mit A.C.I.D. Cloak (SecuROM 7.x)",
+   "verified": true
+  },
+  {
+   "game": "GTA San Andreas",
+   "year": 2005,
+   "disc": [
+    "DVD"
+   ],
+   "label": "SA_GER_V201B",
+   "lang": "de",
+   "protection": "SecuROM",
+   "evidence": "wie Vice City angenommen",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SecuROM",
+   "notes": "DPM-Geschwindigkeit Maximum (12x brach mit 'Logical Unit Not Ready' ab); Start vermutlich nur mit A.C.I.D. Cloak",
+   "verified": false
+  },
+  {
+   "game": "Star Wars: Force Commander",
+   "year": 2000,
+   "disc": [
+    "CD 1"
+   ],
+   "label": "FOCOM_1",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien, Exes nur Standard-Sektionen",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "Star Wars: Force Commander",
+   "year": 2000,
+   "disc": [
+    "CD 2"
+   ],
+   "label": "FOCOM_2",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien; CD.IDX und '_.' sind Platzhalter über die ganze Disc (Füllbereich), Lesefehler dort sind Kratzer, kein Schutz",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "StarCraft",
+   "year": 1998,
+   "disc": [
+    "SCDisc1"
+   ],
+   "label": "SCDISC1",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "nur Autorun.inf, Installer, Tome.mpq",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "StarCraft: Brood War",
+   "year": 1998,
+   "disc": [
+    "SCDisc2"
+   ],
+   "label": "SCDISC2",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "Warcraft III: Reign of Chaos",
+   "year": 2002,
+   "disc": [
+    "CD"
+   ],
+   "label": "WARCRAFT_III",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine SafeDisc-/SecuROM-Dateien",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "Warcraft III: The Frozen Throne",
+   "year": 2003,
+   "disc": [
+    "CD"
+   ],
+   "label": "THEFROZENTHRONE",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien (Pressung 2005)",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "Start-Up",
+   "year": 1999,
+   "disc": [
+    "CD"
+   ],
+   "label": "START_UP",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "Battle Realms",
+   "year": 2001,
+   "disc": [
+    "CD"
+   ],
+   "label": "BATTLE_REALMS",
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "Exe nur Sektionen .text .rdata .data .rsrc",
+   "image": "ISO",
+   "verified": true
+  },
+  {
+   "game": "3-D Ultra Radio Control Racers Deluxe",
+   "year": 2001,
+   "disc": [
+    "CD"
+   ],
+   "label": "RCRACERS",
+   "lang": "de",
+   "protection": "Label-Prüfung",
+   "evidence": "RCRacers.exe vergleicht nur den Volume-Namen",
+   "image": "ISO",
+   "alcohol_datatype": "mit genau diesem Label bauen (genisoimage -V RCRACERS)",
+   "verified": true
+  },
+  {
+   "game": "Motocross Madness 2",
+   "year": 2000,
+   "disc": [
+    "CD"
+   ],
+   "lang": "de",
+   "protection": "SafeDisc 1",
+   "evidence": "SafeDisc-1-Dateien, Start nur vom MDF/MDS",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SafeDisc",
+   "verified": true
+  },
+  {
+   "game": "Age of Empires Collector's Edition",
+   "year": 2006,
+   "disc": [
+    "DVD"
+   ],
+   "lang": "de",
+   "protection": "keiner",
+   "evidence": "SafeDisc-Reste auf der Disc, aber Spiel-Exes nur Standard-Sektionen",
+   "image": "ISO",
+   "alcohol_datatype": "Pressung 2006",
+   "verified": true
+  },
+  {
+   "game": "Tonic Trouble",
+   "year": 1999,
+   "disc": [
+    "CD"
+   ],
+   "lang": "de",
+   "protection": "unbekannt (defekte Sektoren)",
+   "evidence": "Datenfehler beim Lesen von GAMEDATA/tt4.cnt ist ein absichtlicher Schutz-Sektor",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "beim Kopieren 'Skip' wählen",
+   "verified": false
+  },
+  {
+   "game": "TrackMania Sunrise",
+   "year": 2005,
+   "disc": [
+    "CD"
+   ],
+   "lang": "de",
+   "protection": "StarForce",
+   "evidence": "installiert StarForce-Treiber beim ersten Start",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "StarForce",
+   "notes": "StarForce nie unter Vista oder neuer installieren; Patch 1.51 vor dem ersten Start",
+   "verified": false
+  }
+ ]
+}

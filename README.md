@@ -92,6 +92,7 @@ Client und Umgebung:
     ./xpctl.py reg 'HKCU\Control Panel\Mouse' [--recurse 2] [--values] [--json]
     ./xpctl.py settings [--only region,users] [--paths]
     ./xpctl.py setupapi [-g TEXT] [--last N]   # letzte Treiberinstallationen
+    ./xpctl.py uninstall NAME [--run]          # Uninstall-Eintrag zeigen, mit --run Deinstaller starten
     ./xpctl.py productkey --out DATEI          # nur in Datei, im Terminal nur "Format ok (5x5)"
 
 `settings` zeigt je Eintrag den Ist-Wert und, wenn bekannt, die Bedeutung. Abschnitte: `explorer design region users quiet network gaming hardware`. Kennwörter werden nie ausgegeben, nur "hinterlegt: ja/nein". HKCU ist der Benutzer, unter dem der Server läuft. Nicht gesetzte Werte heißen "Windows-Standard", nicht "aus".
@@ -167,3 +168,7 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
 ## Lizenz
 
 MIT, siehe `LICENSE`.
+
+## Kopierschutz-Datenbank
+
+`disc-protection.json` sammelt geprüfte Original-Discs: Volume-Label, Schutz (SafeDisc, SecuROM, StarForce, Label-Prüfung oder keiner), das Merkmal, an dem er erkannt wurde, und womit sich die Disc startfähig abbilden ließ (ISO oder MDF/MDS mit Alcohol-Datentyp). `xpctl.py disc` zeigt den passenden Eintrag zum eingelegten Label. `verified: false` heißt angenommen, nicht getestet. Ergänzungen per Pull Request sind willkommen.

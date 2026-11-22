@@ -35,6 +35,7 @@
   xpctl.py hash DATEI... [--sha1] | copy QUELLE ZIEL [--verify] | rm PFAD... [-r] [--force]
   xpctl.py disc [E:]          Label, Wurzel, Kopierschutz-Dateien, PE-Sektionen der Exes
   xpctl.py setupapi [-g TEXT] [--last N]   letzte Treiberinstallationen aus setupapi.log
+  xpctl.py uninstall NAME [--run]          Uninstall-Eintrag zeigen, mit --run Deinstaller starten
 
 Host: --host oder XPCTL_HOST (Pflicht), Port 5050 (XPCTL_PORT).
 Passwort: XPCTL_KEY oder die Datei aus XPCTL_KEY_FILE (Standard: Datei "key" im Ordner xpctl der Benutzer-Konfiguration).
@@ -1001,7 +1002,26 @@ def cmd_disc(sock, args):
         print("Schutz: keine bekannten Dateien/Sektionen (dann ripiso, bei Lesefehlern Alcohol)")
     for e, sl in r["sections"].items():
         print(f"  {e}: {sl}")
+    known = disc_lookup(r["label"], args.db)
+    for d in known:
+        flag = "" if d.get("verified", True) else " (nicht verifiziert)"
+        print(f"Bekannt: {d['game']} {'/'.join(d['disc'])}: {d['protection']}{flag}, Image {d['image']}"
+              + (f", Alcohol-Datentyp {d['alcohol_datatype']}" if d.get("alcohol_datatype") else ""))
+        print(f"  Merkmal: {d['evidence']}" + (f"\n  Hinweis: {d['notes']}" if d.get("notes") else ""))
+    if not known:
+        print("Label nicht in disc-protection.json: nach dem Prüfen dort ergänzen")
     return 0
+
+
+def disc_lookup(label, db=None):
+    path = db or os.path.join(os.path.dirname(os.path.abspath(__file__)), "disc-protection.json")
+    try:
+        with open(path, encoding="utf-8") as f:
+            discs = json.load(f)["discs"]
+    except OSError:
+        return []
+    want = (label or "").strip().lower()
+    return [d for d in discs if d.get("label") and d["label"].lower() == want]
 
 
 def cmd_setupapi(sock, args):
@@ -1010,6 +1030,20 @@ def cmd_setupapi(sock, args):
         return 1
     print("\n\n".join(b.strip() for b in r["blocks"]))
     return 0
+
+
+def cmd_uninstall(sock, args):
+    r = rpc(sock, {"op": "uninstall", "name": args.name, "run": args.run})
+    if r is None:
+        return 1
+    for e in r["entries"]:
+        print(f"{e['name']} {e['version']} [{e['key']}]\n  {e['uninstall']}")
+    if r.get("started"):
+        print(f"gestartet: {r['started']} (Dialoge mit ui/press bedienen)")
+    elif not r["entries"]:
+        print("kein Eintrag")
+    return 0
+
 
 
 def _label_norm(s):
@@ -1251,7 +1285,13 @@ def main() -> int:
 
     p = sub.add_parser("disc", help="CD prüfen: Label, Kopierschutz-Dateien, PE-Sektionen")
     p.add_argument("drive", nargs="?", help="CD-Laufwerk (Standard wie bei eject)")
+    p.add_argument("--db", help="Kopierschutz-Datenbank (Standard: disc-protection.json neben xpctl.py)")
     p.set_defaults(fn=cmd_disc)
+
+    p = sub.add_parser("uninstall", help="Programm deinstallieren (Uninstall-Eintrag), Dialoge danach per press")
+    p.add_argument("name", help="Teil von Anzeigename oder Schlüssel")
+    p.add_argument("--run", action="store_true", help="Deinstaller starten (sonst nur anzeigen)")
+    p.set_defaults(fn=cmd_uninstall)
 
     p = sub.add_parser("setupapi", help="letzte Treiberinstallationen aus setupapi.log")
     p.add_argument("-g", "--grep")

@@ -2833,6 +2833,42 @@ def op_setupapi(sock, req):
     return {"ok": True, "blocks": blocks[-(req.get("last") or 5):]}
 
 
+def op_uninstall(sock, req):
+    """Uninstall-Eintrag per Name (Teil von DisplayName oder Schlüssel) finden, mit run den Deinstaller starten
+    (MSI: msiexec /x {GUID} /qb). Der Deinstaller läuft losgelöst, Dialoge danach per ui/press."""
+    q = req["name"].lower()
+    u = reg_read(HKLM_UNINSTALL)
+    hits = []
+    for key in (u[1] if u else []):
+        e = reg_read(HKLM_UNINSTALL + "\\" + key, False)
+        if e is None:
+            continue
+        v = e[0]
+        disp = str(v.get("DisplayName") or "")
+        if q == key.lower() or q == disp.lower():
+            hits = [(key, v)]
+            break
+        if q in key.lower() or q in disp.lower():
+            hits.append((key, v))
+    info = [{"key": k, "name": str(v.get("DisplayName") or ""), "version": str(v.get("DisplayVersion") or ""),
+             "uninstall": str(v.get("QuietUninstallString") or v.get("UninstallString") or ""),
+             "location": str(v.get("InstallLocation") or "")} for k, v in hits]
+    if not req.get("run"):
+        return {"ok": True, "entries": info}
+    if len(info) != 1:
+        return {"ok": False, "error": "'%s' passt auf %d Einträge, genauer angeben" % (req["name"], len(info)),
+                "entries": info}
+    cmd = info[0]["uninstall"]
+    if not cmd:
+        return {"ok": False, "error": "kein UninstallString", "entries": info}
+    m = re.search(r"(?i)msiexec(\.exe)?\s+/[ix]\s*(\{[0-9a-f-]+\})", cmd)
+    if m:
+        cmd = "msiexec.exe /x %s /qb" % m.group(2)
+    subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     creationflags=0x00000008 | 0x00000200)  # DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP
+    return {"ok": True, "entries": info, "started": cmd}
+
+
 OPS = {"ping": op_ping, "run": op_run, "put": op_put, "get": op_get, "update": op_update,
        "ui": op_ui, "shot": op_shot, "click": op_click, "press": op_press,
        "settext": op_settext, "key": op_key, "type": op_type, "focus": op_focus,
@@ -2842,7 +2878,8 @@ OPS = {"ping": op_ping, "run": op_run, "put": op_put, "get": op_get, "update": o
        "mount": op_mount, "eject": op_eject, "vol": op_vol,
        "ripiso": op_ripiso, "pesec": op_pesec, "driver": op_driver,
        "games": op_games, "ls": op_ls, "cat": op_cat, "ps": op_ps, "kill": op_kill,
-       "hash": op_hash, "copy": op_copy, "rm": op_rm, "disc": op_disc, "setupapi": op_setupapi}
+       "hash": op_hash, "copy": op_copy, "rm": op_rm, "disc": op_disc, "setupapi": op_setupapi,
+       "uninstall": op_uninstall}
 
 
 def describe(req):
