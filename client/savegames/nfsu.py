@@ -14,8 +14,9 @@ Application Data\\NFS Underground``):
 - ``<Name>0.pro``: Online-Profil mit Zugangsdaten. Wird nie angezeigt.
 
 Geprüft an zwei Profilen einer deutschen Retail-Installation mit ``Speed.exe`` vom 15.01.2004.
-Die Prüfsummen stimmen für alle fünf Binärdateien. Dass das Spiel eine von hier geschriebene
-``.opt``/``.ugd`` annimmt, ist noch nicht geprüft.
+Die Prüfsummen stimmen für alle fünf Binärdateien. Eine von hier geschriebene ``.cfg`` lädt das
+Spiel (geprüft mit LIGHTSTREAKS). Dass es eine reparierte ``.opt``/``.ugd`` annimmt, ist noch nicht
+geprüft.
 """
 from __future__ import annotations
 
@@ -55,6 +56,8 @@ CFG_KEYS = {
     "SOUNDPERF": ("Tonqualität", {}),
     "SOUNDENABLE": ("Ton an", {}),
 }
+# Mit set geändert, Spiel geladen, Wirkung im Spiel gesehen (2026-11-23).
+CFG_VERIFIED = {"LIGHTSTREAKS"}
 _CFG_LINE = re.compile(rb"^([A-Za-z]+): (-?\d+)$")
 
 
@@ -81,7 +84,7 @@ class NfsuCfg(SaveFile):
         out = []
         for _, k, v in self._items():
             label, choices = CFG_KEYS.get(k.upper(), (k, {}))
-            out.append(Field(k, label, v, "int", writable=True, choices=choices))
+            out.append(Field(k, label, v, "int", writable=True, verified=k.upper() in CFG_VERIFIED, choices=choices))
         return out
 
     def set(self, key: str, value: str) -> None:
@@ -208,8 +211,10 @@ class NfsUnderground(Game):
     exe = "Speed.exe"
     notes = [
         "Ein Absturz beim Laden eines Profils lag einmal an einer Grafikeinstellung in der .cfg "
-        "(RES 3, ENVMAP 3, MOTIONBLUR 1, LIGHTSTREAKS 1 auf einer GeForce 7800 GTX). "
-        "Test: die Werte eines frischen Profils übernehmen.",
+        "(Verdacht auf einer GeForce 7800 GTX: RES 3, ENVMAP 3 oder MOTIONBLUR 1; LIGHTSTREAKS 1 "
+        "ist ausgeschlossen). Test: die Werte eines frischen Profils übernehmen.",
+        "Nicht mit --force schreiben: das Spiel schreibt .cfg, .opt und Profiles.usr beim Profilwechsel "
+        "und beim Beenden aus dem Speicher neu und überschreibt die Änderung. Erst Speed.exe beenden.",
     ]
 
     @classmethod
