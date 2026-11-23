@@ -18,6 +18,8 @@ namespace XpServer.Ui
         bool _onlyErrors;
         const int RowH = 18;
         const int BarW = 8;
+        // Feste Spalten, damit Text bei allen Zeilenarten an derselben Stelle beginnt
+        const int PadX = 8, TimeW = 64, TagW = 76, ClientW = 80;
 
         public LogView()
         {
@@ -69,7 +71,7 @@ namespace XpServer.Ui
             Invalidate();
         }
 
-        int Rows { get { return Math.Max(1, (Height - 8) / RowH); } }
+        int Rows { get { return Math.Max(1, Height / RowH); } }
         int MaxTop { get { return Math.Max(0, _view.Count - Rows); } }
 
         void ScrollTo(int top)
@@ -153,20 +155,22 @@ namespace XpServer.Ui
                     Theme.Ui, new Rectangle(0, 0, Width, Height), Theme.Faint, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 return;
             }
-            int y = 4;
+            int y = (Height % RowH) / 2;   // Restplatz oben und unten gleich verteilen
             int textRight = Width - BarW - 8;
             for (int i = _top; i < _view.Count && y < Height; i++, y += RowH)
             {
                 var l = _view[i];
                 bool err = l.Kind == LogKind.Error || l.Kind == LogKind.Denied;
                 if (err)
-                    using (var b = new SolidBrush(Theme.Alpha(Theme.Red, 26))) g.FillRectangle(b, 0, y, textRight + 4, RowH);
+                    using (var p = Theme.Round(new RectangleF(0, y, textRight + 2, RowH), 4))
+                    using (var b = new SolidBrush(Theme.Alpha(Theme.Red, 26))) g.FillPath(b, p);
                 else if (i % 2 == 1)
-                    using (var b = new SolidBrush(Color.FromArgb(29, 32, 40))) g.FillRectangle(b, 0, y, textRight + 4, RowH);
+                    using (var p = Theme.Round(new RectangleF(0, y, textRight + 2, RowH), 4))
+                    using (var b = new SolidBrush(Color.FromArgb(29, 32, 40))) g.FillPath(b, p);
 
-                int x = 10;
+                int x = PadX;
                 TextRenderer.DrawText(g, l.Time.ToString("HH:mm:ss"), Theme.Mono, new Point(x, y + 3), Theme.Faint, TextFormatFlags.NoPrefix);
-                x += 70;
+                x += TimeW;
 
                 string text = l.Text;
                 Color tag = Theme.Dim;
@@ -182,19 +186,22 @@ namespace XpServer.Ui
                 if (tagText != null)
                 {
                     var sz = TextRenderer.MeasureText(g, tagText, Theme.UiBold, Size.Empty, TextFormatFlags.NoPadding);
-                    var pill = new RectangleF(x, y + 2, Math.Max(sz.Width + 12, 68), RowH - 4);
+                    var pill = new RectangleF(x, y + 2, Math.Max(sz.Width + 12, TagW), RowH - 4);
                     using (var p = Theme.Round(pill, 6))
                     using (var b = new SolidBrush(Theme.Alpha(tag, 38))) g.FillPath(b, p);
                     TextRenderer.DrawText(g, tagText, Theme.UiBold, Rectangle.Round(pill), tag,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-                    x += (int)pill.Width + 8;
                 }
+                x += TagW + 10;
+                // Client-IP rechtsbündig und gedimmt am Zeilenende, damit links keine leere Spalte bleibt
+                int right = textRight;
                 if (l.Client != null && l.Kind == LogKind.Op)
                 {
-                    TextRenderer.DrawText(g, l.Client, Theme.Small, new Point(x, y + 4), Theme.Dim, TextFormatFlags.NoPrefix);
-                    x += 84;
+                    TextRenderer.DrawText(g, l.Client, Theme.Small, new Rectangle(right - ClientW, y, ClientW, RowH), Theme.Faint,
+                        TextFormatFlags.NoPrefix | TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
+                    right -= ClientW + 8;
                 }
-                TextRenderer.DrawText(g, text, Theme.Mono, new Rectangle(x, y + 3, Math.Max(10, textRight - x), RowH - 3),
+                TextRenderer.DrawText(g, text, Theme.Mono, new Rectangle(x, y + 3, Math.Max(10, right - x), RowH - 3),
                     err ? Theme.Mix(Theme.Red, Theme.Text, 0.35f) : Theme.Text,
                     TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
             }

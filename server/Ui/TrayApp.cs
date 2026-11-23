@@ -64,6 +64,8 @@ namespace XpServer.Ui
                 if (Dialogs.Confirm("xpserver beenden?", "Danach ist der Rechner nicht mehr per xpctl erreichbar."))
                     Quit(0);
             });
+            Space(m);
+            Space(more.DropDown);
             m.Opening += (s, e) =>
             {
                 _head.Text = "xpserver v" + Program.Version + "  ·  Port " + Program.Opt.Port;
@@ -151,6 +153,14 @@ namespace XpServer.Ui
             try { if (_inst != null) _inst._icon.Visible = false; } catch { }
             try { if (code == 0) Log.Write("beendet.", LogKind.System); } catch { }
             Environment.Exit(code);
+        }
+
+        /// <summary>Einheitliche Abstände im Menü: Luft oben/unten, etwas höhere Zeilen.</summary>
+        static void Space(ToolStripDropDown d)
+        {
+            d.Padding = new Padding(0, 4, 0, 4);
+            foreach (ToolStripItem it in d.Items)
+                if (!(it is ToolStripSeparator)) it.Padding = new Padding(0, 3, 0, 3);
         }
     }
 }

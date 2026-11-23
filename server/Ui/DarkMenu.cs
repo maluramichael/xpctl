@@ -35,7 +35,13 @@ namespace XpServer.Ui
 
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
-            e.TextColor = (e.Item.Tag as string) == "head" ? Theme.Accent : !e.Item.Enabled ? Theme.Dim : Theme.Text;
+            if ((e.Item.Tag as string) == "head")
+            {
+                // Der Basis-Renderer färbt deaktivierte Einträge grau, die Kopfzeile selbst zeichnen
+                TextRenderer.DrawText(e.Graphics, e.Text, e.TextFont, e.TextRectangle, Theme.Accent, e.TextFormat);
+                return;
+            }
+            e.TextColor = !e.Item.Enabled ? Theme.Dim : Theme.Text;
             base.OnRenderItemText(e);
         }
 

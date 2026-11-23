@@ -19,7 +19,13 @@ namespace XpServer.Ui
         readonly Chip _errors, _lock, _clear, _close, _min;
         readonly Timer _tick = new Timer { Interval = 1000 };
         readonly Activity _act;
-        const int Head = 64, Cards = 76, Spark = 64, Bar = 34, Foot = 26, Pad = 14;
+        // Raster: Außenrand Pad, zwischen allen Blöcken Gap, Innenabstand in Flächen Inner.
+        const int Pad = 14, Gap = 10, Inner = 12, Head = 64, CardH = 66, SparkH = 60, BarH = 24, Foot = 30, Btn = 26;
+        static int CardsY { get { return Head; } }
+        static int SparkY { get { return CardsY + CardH + Gap; } }
+        static int BarY { get { return SparkY + SparkH + Gap; } }
+        static int LogY { get { return BarY + BarH + Gap; } }
+        const int FilterW = 236, LockW = 80, ClearW = 110, ErrW = 86, LogInset = 4;
 
         public Dashboard(Activity act)
         {
@@ -30,7 +36,7 @@ namespace XpServer.Ui
             Size = new Size(840, 560);
             MinimumSize = new Size(560, 380);
             var wa = Screen.PrimaryScreen.WorkingArea;
-            Location = new Point(wa.Right - Width - 16, wa.Bottom - Height - 16);
+            Location = new Point(wa.Right - Width - Pad, wa.Bottom - Height - Pad);
             BackColor = Theme.Bg;
             ForeColor = Theme.Text;
             Font = Theme.Ui;
@@ -67,7 +73,7 @@ namespace XpServer.Ui
             _hint.BringToFront();
             _log.SetLines(Log.Snapshot());
             Log.Line += OnLine;
-            _tick.Tick += (s, e) => { _lock.On = Server.Locked; Invalidate(new Rectangle(0, 0, Width, Head + Cards + Spark + 8)); };
+            _tick.Tick += (s, e) => { _lock.On = Server.Locked; Invalidate(new Rectangle(0, 0, Width, BarY)); };
             _tick.Start();
             Layout2();
         }
@@ -112,15 +118,18 @@ namespace XpServer.Ui
         {
             if (_log == null || _close == null) return;
             int w = ClientSize.Width, h = ClientSize.Height;
-            _close.SetBounds(w - 38, 14, 26, 24);
-            _min.SetBounds(w - 66, 14, 26, 24);
-            int by = Head + Cards + Spark + 10;
-            _filter.SetBounds(Pad + 30, by + 9, 200, 16);
-            _hint.SetBounds(Pad + 30, by + 9, 200, 16);
-            _errors.SetBounds(Pad + 250, by + 4, 86, 24);
-            _lock.SetBounds(w - Pad - 196, by + 4, 80, 24);
-            _clear.SetBounds(w - Pad - 110, by + 4, 110, 24);
-            _log.SetBounds(Pad + 1, by + Bar + 1, w - 2 * Pad - 2, h - by - Bar - Foot - 2);
+            // Fensterknöpfe mittig zum Kopfblock (Symbol 36 px ab y = Pad)
+            int btnY = Pad + 18 - 12;
+            _close.SetBounds(w - Pad - Btn, btnY, Btn, 24);
+            _min.SetBounds(w - Pad - 2 * Btn - 4, btnY, Btn, 24);
+            int ty = BarY + (BarH - 16) / 2 + 1;
+            _filter.SetBounds(Pad + 30, ty, FilterW - 40, 16);
+            _hint.SetBounds(Pad + 30, ty, FilterW - 40, 16);
+            _errors.SetBounds(Pad + FilterW + 8, BarY, ErrW, BarH);
+            _clear.SetBounds(w - Pad - ClearW, BarY, ClearW, BarH);
+            _lock.SetBounds(w - Pad - ClearW - 8 - LockW, BarY, LockW, BarH);
+            // Log sitzt mit kleinem Abstand in einer abgerundeten Fläche (gezeichnet in OnPaint)
+            _log.SetBounds(Pad + LogInset, LogY + LogInset, w - 2 * Pad - 2 * LogInset, h - Foot - LogY - 2 * LogInset);
             Invalidate();
         }
 
@@ -162,7 +171,7 @@ namespace XpServer.Ui
             Color sc = Server.Locked ? Theme.Red : busy ? Theme.Amber : Theme.Accent;
             string pillText = status + "  :" + Program.Opt.Port;
             var psz = TextRenderer.MeasureText(pillText, Theme.UiBold);
-            var pill = new RectangleF(w - 86 - psz.Width - 26, 16, psz.Width + 26, 22);
+            var pill = new RectangleF(w - Pad - 2 * Btn - 4 - Gap - (psz.Width + 26), Pad + 18 - 11, psz.Width + 26, 22);
             using (var p = Theme.Round(pill, 11))
             using (var b = new SolidBrush(Theme.Alpha(sc, 36))) g.FillPath(b, p);
             using (var b = new SolidBrush(sc)) g.FillEllipse(b, pill.X + 9, pill.Y + 8, 6, 6);
@@ -182,50 +191,46 @@ namespace XpServer.Ui
                 new[] { "LAUFZEIT", upText, Server.Started.ToString("dd.MM. HH:mm") },
                 new[] { "ERLAUBT", nets.Count > 0 ? nets[0] : "-", nets.Count > 1 ? "+" + (nets.Count - 1) + " weitere" : "Netz" },
             };
-            int cw = (w - 2 * Pad - 4 * 10) / 5;
+            int inner = w - 2 * Pad;
             for (int i = 0; i < cards.Length; i++)
             {
-                var r = new RectangleF(Pad + i * (cw + 10), Head + 4, cw, Cards - 10);
-                using (var p = Theme.Round(r, 8))
-                {
-                    using (var b = new SolidBrush(Theme.Panel)) g.FillPath(b, p);
-                    using (var pen = new Pen(Theme.Border)) g.DrawPath(pen, p);
-                }
+                // Rest der Division verteilen, damit die letzte Karte bündig rechts endet
+                int x0 = Pad + (int)Math.Round(i * (inner + Gap) / 5.0);
+                int x1 = Pad + (int)Math.Round((i + 1) * (inner + Gap) / 5.0) - Gap;
+                var r = new RectangleF(x0, CardsY, x1 - x0, CardH);
+                Surface(g, r);
                 Color vc = i == 1 && Server.ErrorsTotal > 0 ? Theme.Red : i == 2 && Server.ClientsNow > 0 ? Theme.Amber : Theme.Text;
-                TextRenderer.DrawText(g, cards[i][0], Theme.Small, new Point((int)r.X + 12, (int)r.Y + 9), Theme.Dim, TextFormatFlags.NoPadding);
+                int cx = (int)r.X + Inner, cy = (int)r.Y;
+                TextRenderer.DrawText(g, cards[i][0], Theme.Small, new Point(cx, cy + 10), Theme.Dim, TextFormatFlags.NoPadding);
                 var big = cards[i][1].Length > 10 ? Theme.UiBold : Theme.Big;
-                TextRenderer.DrawText(g, cards[i][1], big, new Rectangle((int)r.X + 10, (int)r.Y + 22, (int)r.Width - 14, 26), vc,
+                TextRenderer.DrawText(g, cards[i][1], big, new Rectangle(cx - 1, cy + 22, (int)r.Width - 2 * Inner + 2, 24), vc,
                     TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
-                TextRenderer.DrawText(g, cards[i][2], Theme.Small, new Point((int)r.X + 12, (int)r.Y + 50), Theme.Faint, TextFormatFlags.NoPadding);
+                TextRenderer.DrawText(g, cards[i][2], Theme.Small, new Point(cx, cy + CardH - 10 - 11), Theme.Faint, TextFormatFlags.NoPadding);
             }
 
             // Aktivität
-            var sr = new RectangleF(Pad, Head + Cards, w - 2 * Pad, Spark);
-            using (var p = Theme.Round(sr, 8))
-            {
-                using (var b = new SolidBrush(Theme.Panel)) g.FillPath(b, p);
-                using (var pen = new Pen(Theme.Border)) g.DrawPath(pen, p);
-            }
-            TextRenderer.DrawText(g, "AKTIVITÄT  ·  letzte 30 Minuten", Theme.Small, new Point(Pad + 12, (int)sr.Y + 8), Theme.Dim, TextFormatFlags.NoPadding);
+            var sr = new RectangleF(Pad, SparkY, inner, SparkH);
+            Surface(g, sr);
+            TextRenderer.DrawText(g, "AKTIVITÄT  ·  letzte 30 Minuten", Theme.Small, new Point(Pad + Inner, (int)sr.Y + 10), Theme.Dim, TextFormatFlags.NoPadding);
             var buckets = _act.Minutes(30);
             int max = 1;
             foreach (var x in buckets) max = Math.Max(max, x);
-            TextRenderer.DrawText(g, "max " + max + "/min", Theme.Small, new Rectangle(0, (int)sr.Y + 8, (int)sr.Right - 12, 12), Theme.Faint,
+            TextRenderer.DrawText(g, "max " + max + "/min", Theme.Small, new Rectangle(0, (int)sr.Y + 10, (int)sr.Right - Inner, 12), Theme.Faint,
                 TextFormatFlags.Right | TextFormatFlags.NoPadding);
-            float bw = (sr.Width - 24) / buckets.Length;
-            float baseY = sr.Bottom - 8, hMax = sr.Height - 30;
+            float bw = (sr.Width - 2 * Inner + 3) / buckets.Length;
+            float baseY = sr.Bottom - 10, hMax = sr.Height - 36;
             for (int i = 0; i < buckets.Length; i++)
             {
                 float bh = buckets[i] == 0 ? 2 : Math.Max(4, hMax * buckets[i] / max);
-                var br = new RectangleF(sr.X + 12 + i * bw + 1.5f, baseY - bh, bw - 3, bh);
+                var br = new RectangleF(sr.X + Inner + i * bw, baseY - bh, bw - 3, bh);
                 Color c = buckets[i] == 0 ? Theme.Panel2 : Theme.Mix(Theme.Accent, Theme.Amber, (float)buckets[i] / max);
                 using (var p = Theme.Round(br, Math.Min(2.5f, br.Width / 2)))
                 using (var b = new SolidBrush(c)) g.FillPath(b, p);
             }
 
             // Leiste über dem Log
-            int by = Head + Cards + Spark + 10;
-            var fr = new RectangleF(Pad, by + 4, 236, 24);
+            int by = BarY;
+            var fr = new RectangleF(Pad + 0.5f, by + 0.5f, FilterW - 1, BarH - 1);
             using (var p = Theme.Round(fr, 6))
             {
                 using (var b = new SolidBrush(Theme.Panel2)) g.FillPath(b, p);
@@ -233,21 +238,29 @@ namespace XpServer.Ui
             }
             using (var pen = new Pen(Theme.Dim, 1.6f))
             {
-                g.DrawEllipse(pen, Pad + 9, by + 10, 9, 9);
-                g.DrawLine(pen, Pad + 17, by + 18, Pad + 21, by + 22);
+                int my = by + BarH / 2;
+                g.DrawEllipse(pen, Pad + 10, my - 6, 9, 9);
+                g.DrawLine(pen, Pad + 18, my + 2, Pad + 22, my + 6);
             }
 
-            // Rahmen ums Log
-            var lr = new RectangleF(Pad, by + Bar, w - 2 * Pad - 1, h - by - Bar - Foot);
-            using (var pen = new Pen(Theme.Border)) g.DrawRectangle(pen, lr.X, lr.Y, lr.Width, lr.Height);
+            // Fläche ums Log, gleiche Form wie Karten und Aktivität
+            Surface(g, new RectangleF(Pad, LogY, inner, h - Foot - LogY));
 
-            // Fuß
-            TextRenderer.DrawText(g, "Log: " + Log.FilePath, Theme.Small, new Rectangle(Pad, h - Foot + 7, w - 2 * Pad - 160, 14), Theme.Faint,
-                TextFormatFlags.NoPadding | TextFormatFlags.PathEllipsis);
-            TextRenderer.DrawText(g, "Esc schließt ins Tray", Theme.Small, new Rectangle(0, h - Foot + 7, w - Pad - 14, 14), Theme.Faint,
-                TextFormatFlags.Right | TextFormatFlags.NoPadding);
+            // Fuß: nur der Log-Pfad, bündig mit den Flächen
+            TextRenderer.DrawText(g, "Log: " + Log.FilePath, Theme.Small, new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint,
+                TextFormatFlags.NoPadding | TextFormatFlags.PathEllipsis | TextFormatFlags.VerticalCenter);
             using (var pen = new Pen(Theme.Faint))
                 for (int i = 0; i < 3; i++) g.DrawLine(pen, w - 4 - i * 4, h - 3, w - 3, h - 4 - i * 4);
+        }
+
+        /// <summary>Einheitliche Fläche: Panel-Farbe, 1 px Rand, Radius 8, auf halbe Pixel gesetzt.</summary>
+        static void Surface(Graphics g, RectangleF r)
+        {
+            using (var p = Theme.Round(new RectangleF(r.X + 0.5f, r.Y + 0.5f, r.Width - 1, r.Height - 1), 8))
+            {
+                using (var b = new SolidBrush(Theme.Panel)) g.FillPath(b, p);
+                using (var pen = new Pen(Theme.Border)) g.DrawPath(pen, p);
+            }
         }
 
         protected override void OnActivated(EventArgs e) { base.OnActivated(e); Invalidate(); }
