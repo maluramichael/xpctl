@@ -101,7 +101,14 @@ Erst Text, nur im Notfall ein Bild:
 
 ### Spiele-Versionen
 
+    ./xpctl.py gamecheck                   # Spiele mit Patch oder unklarem Stand, darunter die Zähler
+    ./xpctl.py gamecheck --alle            # alle gefundenen, auch aktuelle und unbekannte
+    ./xpctl.py gamecheck --push-db         # vorher game-versions.json neben xpserver.exe legen
     ./xpctl.py games [filter] [--db DATEI] [--json DATEI] [--gog-ssh]
+
+`gamecheck` (Server v17) fragt nur nach Spielen, die `game-versions.json` kennt. Gesucht wird in dieser Reihenfolge: GOG-Registry (`HKLM\SOFTWARE\GOG.com\Games`, ein Schlüssel für alle GOG-Spiele, über `gog_id`), Registry-Hinweise aus der Datenbank (`reg`, z. B. Blizzard `InstallPath`), Desktop-Verknüpfungen. Die erste Zuordnung läuft über Exe-Name und Größe, ohne die Datei zu lesen; danach bestätigt der md5 im Hintergrund. Die md5-Werte merkt sich der Server in `xpserver-md5.tsv` neben der Exe (Schlüssel Pfad, Größe, Änderungszeit), ein zweiter Lauf liest keine Exe mehr. Unbekannte Exes werden nicht gehasht. Gemessen auf einem XP-Rechner mit 156 gefundenen Exes: erster Lauf 2,0 s, danach 0,3 s; Datenbank laden 20 bis 30 ms.
+
+Der Status kommt aus dem Feld `status` der Datenbank: `aktuell`, `patch` (ein offizieller neuerer Patch existiert, Community-Patches zählen nicht) oder `unklar`. Ein `?` vor der Version heißt: Zuordnung mit niedriger Sicherheit. Die Datenbank ist in `xpserver.exe` eingebaut. Eine `game-versions.json` neben der Exe gilt nur, wenn ihr `stand` neuer ist, so überdeckt eine alte Datei nach einem Update keine neuere Datenbank. Dieselbe Liste zeigt das Live-Fenster im Reiter "Spiele" (siehe `server/README.md`).
 
 Pro Desktop-Verknüpfung zeigt `games` die Ziel-Exe, deren VERSIONINFO, Größe, Datum und md5, im Spielordner `goggame-*.info`, `gameinfo`, Versions- und Patchdateien sowie den passenden Uninstall-Eintrag.
 
@@ -111,9 +118,11 @@ Neue Einträge ergänzen: `games --json roh.json` schreibt je Spiel md5, Größe
 
     {"game": "Name", "year": "1999", "exe": "spiel.exe", "size": 123456, "md5": "...",
      "file_version": "1.0.0.0", "product_version": "1, 0, 0, 0",
-     "version": "erkannte Version", "latest": "neuester bekannter Stand", "confidence": "hoch"}
+     "version": "erkannte Version", "latest": "neuester bekannter Stand", "status": "aktuell",
+     "confidence": "hoch", "gog_id": "1207658...", "reg": ["HKLM\\SOFTWARE\\Firma\\Spiel|InstallPath"],
+     "probe": "Game.exe"}
 
-unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand recherchiert und kann Fehler enthalten, Ergänzungen und Korrekturen sind willkommen.
+unter `games` in `game-versions.json` eintragen und `stand` im Kopf auf das heutige Datum setzen. `gog_id`, `reg` und `probe` sind optional; `probe` heißt, die Version steckt in einer anderen Datei im selben Ordner (Diablo II: `Diablo II.exe` ist nur der Starter, `Game.exe` trägt die Version). `client/tests/test_gamedb.py` prüft die Felder und dass Exe-Name plus Größe eindeutig bleiben. Die Datenbank ist von Hand recherchiert und kann Fehler enthalten, Ergänzungen und Korrekturen sind willkommen.
 
 `--gog-ssh` ergänzt die GOG-Version aus den Setup-Dateinamen auf einem SSH-Host (`XPCTL_GOG_SSH`, `XPCTL_GOG_DIR`).
 

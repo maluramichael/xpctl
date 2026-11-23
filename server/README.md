@@ -25,6 +25,8 @@ Umstieg vom alten Python-Server: auf dem Client `./xpctl.py migrate` (siehe `cli
 
 Linksklick öffnet das Live-Fenster: Status, Zahl der Befehle und Fehler, offene Verbindungen, Laufzeit, Aktivität der letzten 30 Minuten und das Protokoll mit Filter (Strg+F) und "Nur Fehler". Esc oder × legt es zurück in den Infobereich.
 
+Der Reiter "Spiele" listet die Spiele, die die eingebaute Versionsdatenbank kennt, mit installierter und neuester Version: "Patch da" zuerst, dann "unklar", "aktuell" und "unbekannt" (Desktop-Verknüpfung ohne Datenbank-Eintrag). Die Liste steht nach Bruchteilen einer Sekunde, der md5-Abgleich läuft danach im Hintergrund mit niedrigster Priorität und pausiert, solange ein Programm im Vollbild läuft. Maus über eine Zeile zeigt Exe, Version, neuesten Stand und md5. "Neu prüfen" sucht erneut. Wie gesucht wird, steht in `client/README.md` unter "Spiele-Versionen" (`xpctl gamecheck` zeigt dieselbe Liste).
+
 ![Live-Fenster](../docs/img/live-fenster.png)
 
 Rechtsklick zeigt das Menü:

@@ -7,7 +7,8 @@ using System.Windows.Forms;
 
 namespace XpServer.Ui
 {
-    /// <summary>Hauptfenster: Status, Zahlen, Aktivität der letzten 30 Minuten, Live-Log.</summary>
+    /// <summary>Hauptfenster mit zwei Reitern: Übersicht (Status, Zahlen, Aktivität, Live-Log) und
+    /// Spiele (bekannte Spiele, installierte und neueste Version, siehe <see cref="GameScan"/>).</summary>
     public class Dashboard : Form
     {
         [DllImport("user32.dll")] static extern bool ReleaseCapture();
@@ -16,7 +17,13 @@ namespace XpServer.Ui
         readonly LogView _log = new LogView();
         readonly TextBox _filter = new TextBox();
         readonly Label _hint = new Label { Text = "Filter (Strg+F)", AutoSize = false };
-        readonly Chip _errors, _lock, _clear, _close, _min;
+        readonly Chip _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _rescan;
+        readonly GamesView _games = new GamesView();
+        int _tab;                                   // 0 Übersicht, 1 Spiele
+        readonly string[] _filters = { "", "" };    // Filtertext je Reiter
+        volatile bool _scanning;
+        GameScanResult _scan;
+        const int TabW = 92;
         readonly Timer _tick = new Timer { Interval = 1000 };
         readonly Activity _act;
         // Raster: Außenrand Pad, zwischen allen Blöcken Gap, Innenabstand in Flächen Inner.
@@ -34,7 +41,7 @@ namespace XpServer.Ui
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             Size = new Size(840, 560);
-            MinimumSize = new Size(560, 380);
+            MinimumSize = new Size(640, 380);
             var wa = Screen.PrimaryScreen.WorkingArea;
             Location = new Point(wa.Right - Width - Pad, wa.Bottom - Height - Pad);
             BackColor = Theme.Bg;
@@ -50,7 +57,11 @@ namespace XpServer.Ui
             _filter.BackColor = Theme.Panel2;
             _filter.ForeColor = Theme.Text;
             _filter.Font = Theme.Ui;
-            _filter.TextChanged += (s, e) => { _log.SetFilter(_filter.Text, _errors.On); UpdateHint(); };
+            _filter.TextChanged += (s, e) =>
+            {
+                if (_tab == 1) _games.SetFilter(_filter.Text); else _log.SetFilter(_filter.Text, _errors.On);
+                UpdateHint();
+            };
             _filter.GotFocus += (s, e) => { UpdateHint(); Invalidate(); };
             _filter.LostFocus += (s, e) => { UpdateHint(); Invalidate(); };
             _hint.BackColor = Theme.Panel2;
@@ -69,7 +80,15 @@ namespace XpServer.Ui
             _min = new Chip("–", false) { Ghost = true };
             _min.Click += (s, e) => WindowState = FormWindowState.Minimized;
 
-            Controls.AddRange(new Control[] { _hint, _log, _filter, _errors, _lock, _clear, _close, _min });
+            _tabMain = new Chip("Übersicht", true) { On = true };
+            _tabMain.Click += (s, e) => SetTab(0);
+            _tabGames = new Chip("Spiele", true);
+            _tabGames.Click += (s, e) => SetTab(1);
+            _rescan = new Chip("Neu prüfen", false) { Visible = false };
+            _rescan.Click += (s, e) => StartScan();
+            _games.Visible = false;
+
+            Controls.AddRange(new Control[] { _hint, _log, _games, _filter, _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _rescan });
             _hint.BringToFront();
             _log.SetLines(Log.Snapshot());
             Log.Line += OnLine;
@@ -79,6 +98,62 @@ namespace XpServer.Ui
         }
 
         void UpdateHint() { _hint.Visible = _filter.Text.Length == 0 && !_filter.Focused; }
+
+        string SubTitle()
+        {
+            return "v" + Program.Version + "  ·  " + Program.Show(Environment.MachineName).ToLowerInvariant() + "  ·  .NET " +
+                Environment.Version.Major + "." + Environment.Version.Minor;
+        }
+
+        void SetTab(int t)
+        {
+            _tabMain.On = t == 0;
+            _tabGames.On = t == 1;
+            if (t == _tab) return;
+            _filters[_tab] = _filter.Text;
+            _tab = t;
+            _log.Visible = _errors.Visible = _lock.Visible = _clear.Visible = t == 0;
+            _games.Visible = _rescan.Visible = t == 1;
+            _filter.Text = _filters[t];
+            Layout2();
+            if (t == 1 && _scan == null) StartScan();
+        }
+
+        /// <summary>Spiele suchen und im Hintergrund prüfen (niedrigste Priorität, pausiert bei Vollbild).</summary>
+        void StartScan()
+        {
+            if (_scanning) return;
+            _scanning = true;
+            _games.SetMessage("Suche Spiele ...");
+            Invalidate();
+            var t = new System.Threading.Thread(() =>
+            {
+                try
+                {
+                    GameScan.Run(true, () => IsDisposed, Desk.FullscreenActive,
+                        res => OnUi(() => { _scan = res; _games.SetRows(res.Rows); Invalidate(); }),
+                        row => OnUi(() => { _games.RowChanged(); Invalidate(new Rectangle(0, CardsY, Width, BarH)); }));
+                }
+                catch (Exception ex)
+                {
+                    Log.Write("  Spiele-Scan fehlgeschlagen: " + ex.Message, LogKind.Error);
+                    OnUi(() => _games.SetMessage("Fehler: " + ex.Message));
+                }
+                finally
+                {
+                    _scanning = false;
+                    OnUi(() => Invalidate());
+                }
+            }) { IsBackground = true, Priority = System.Threading.ThreadPriority.Lowest, Name = "spiele-scan" };
+            t.SetApartmentState(System.Threading.ApartmentState.STA);   // Verknüpfungen lesen geht über COM
+            t.Start();
+        }
+
+        void OnUi(Action a)
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try { BeginInvoke(a); } catch { }
+        }
 
         protected override bool ShowWithoutActivation { get { return !_userOpen; } }
         bool _userOpen;
@@ -122,6 +197,20 @@ namespace XpServer.Ui
             int btnY = Pad + 18 - 12;
             _close.SetBounds(w - Pad - Btn, btnY, Btn, 24);
             _min.SetBounds(w - Pad - 2 * Btn - 4, btnY, Btn, 24);
+            int tx = Pad + 46 + Math.Max(TextRenderer.MeasureText("xpserver", Theme.Title).Width, TextRenderer.MeasureText(SubTitle(), Theme.Ui).Width) + 24;
+            _tabMain.SetBounds(tx, btnY, TabW, 24);
+            _tabGames.SetBounds(tx + TabW + 6, btnY, TabW, 24);
+            if (_tab == 1)
+            {
+                int gy = CardsY + (BarH - 16) / 2 + 1;
+                _filter.SetBounds(Pad + 30, gy, FilterW - 40, 16);
+                _hint.SetBounds(Pad + 30, gy, FilterW - 40, 16);
+                _rescan.SetBounds(w - Pad - ClearW, CardsY, ClearW, BarH);
+                int top = CardsY + BarH + Gap;
+                _games.SetBounds(Pad + LogInset, top + LogInset, w - 2 * Pad - 2 * LogInset, h - Foot - top - 2 * LogInset);
+                Invalidate();
+                return;
+            }
             int ty = BarY + (BarH - 16) / 2 + 1;
             _filter.SetBounds(Pad + 30, ty, FilterW - 40, 16);
             _hint.SetBounds(Pad + 30, ty, FilterW - 40, 16);
@@ -165,8 +254,7 @@ namespace XpServer.Ui
             using (var ico = IconMaker.Draw(36, st, (float)(DateTime.Now.Millisecond / 1000.0)))
                 g.DrawImage(ico, Pad, 14);
             TextRenderer.DrawText(g, "xpserver", Theme.Title, new Point(Pad + 46, 14), Theme.Text, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, "v" + Program.Version + "  ·  " + Program.Show(Environment.MachineName).ToLowerInvariant() + "  ·  .NET " + Environment.Version.Major + "." + Environment.Version.Minor,
-                Theme.Ui, new Point(Pad + 47, 36), Theme.Dim, TextFormatFlags.NoPadding);
+            TextRenderer.DrawText(g, SubTitle(), Theme.Ui, new Point(Pad + 47, 36), Theme.Dim, TextFormatFlags.NoPadding);
             string status = Server.Locked ? "GESPERRT" : busy ? "ARBEITET" : "LAUSCHT";
             Color sc = Server.Locked ? Theme.Red : busy ? Theme.Amber : Theme.Accent;
             string pillText = status + "  :" + Program.ShownPort;
@@ -176,6 +264,8 @@ namespace XpServer.Ui
             using (var b = new SolidBrush(Theme.Alpha(sc, 36))) g.FillPath(b, p);
             using (var b = new SolidBrush(sc)) g.FillEllipse(b, pill.X + 9, pill.Y + 8, 6, 6);
             TextRenderer.DrawText(g, pillText, Theme.UiBold, new Point((int)pill.X + 19, (int)pill.Y + 4), sc, TextFormatFlags.NoPadding);
+
+            if (_tab == 1) { PaintGames(g, w, h); Grip(g, w, h); return; }
 
             // Karten
             var up = DateTime.Now - Server.Started;
@@ -229,7 +319,25 @@ namespace XpServer.Ui
             }
 
             // Leiste über dem Log
-            int by = BarY;
+            FilterBox(g, BarY);
+
+            // Fläche ums Log, gleiche Form wie Karten und Aktivität
+            Surface(g, new RectangleF(Pad, LogY, inner, h - Foot - LogY));
+
+            // Fuß: nur der Log-Pfad, bündig mit den Flächen
+            TextRenderer.DrawText(g, "Log: " + Program.Show(Log.FilePath), Theme.Small, new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint,
+                TextFormatFlags.NoPadding | TextFormatFlags.PathEllipsis | TextFormatFlags.VerticalCenter);
+            Grip(g, w, h);
+        }
+
+        static void Grip(Graphics g, int w, int h)
+        {
+            using (var pen = new Pen(Theme.Faint))
+                for (int i = 0; i < 3; i++) g.DrawLine(pen, w - 4 - i * 4, h - 3, w - 3, h - 4 - i * 4);
+        }
+
+        void FilterBox(Graphics g, int by)
+        {
             var fr = new RectangleF(Pad + 0.5f, by + 0.5f, FilterW - 1, BarH - 1);
             using (var p = Theme.Round(fr, 6))
             {
@@ -242,15 +350,44 @@ namespace XpServer.Ui
                 g.DrawEllipse(pen, Pad + 10, my - 6, 9, 9);
                 g.DrawLine(pen, Pad + 18, my + 2, Pad + 22, my + 6);
             }
+        }
 
-            // Fläche ums Log, gleiche Form wie Karten und Aktivität
-            Surface(g, new RectangleF(Pad, LogY, inner, h - Foot - LogY));
-
-            // Fuß: nur der Log-Pfad, bündig mit den Flächen
-            TextRenderer.DrawText(g, "Log: " + Program.Show(Log.FilePath), Theme.Small, new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint,
-                TextFormatFlags.NoPadding | TextFormatFlags.PathEllipsis | TextFormatFlags.VerticalCenter);
-            using (var pen = new Pen(Theme.Faint))
-                for (int i = 0; i < 3; i++) g.DrawLine(pen, w - 4 - i * 4, h - 3, w - 3, h - 4 - i * 4);
+        /// <summary>Spiele-Reiter: Filter, Zähler je Status, Liste, Datenbank-Stand im Fuß.</summary>
+        void PaintGames(Graphics g, int w, int h)
+        {
+            int inner = w - 2 * Pad;
+            FilterBox(g, CardsY);
+            var res = _scan;
+            int x = Pad + FilterW + 14;
+            var flags = TextFormatFlags.NoPadding | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix;
+            if (res != null)
+            {
+                var n = new Dictionary<string, int>();
+                foreach (var r in res.Rows) { int c; n.TryGetValue(r.Status, out c); n[r.Status] = c + 1; }
+                foreach (var st in new[] { "patch", "unklar", "aktuell", "fehlt", "unbekannt" })
+                {
+                    int c;
+                    if (!n.TryGetValue(st, out c)) continue;
+                    string t = c + " " + GamesView.Label(st);
+                    var sz = TextRenderer.MeasureText(g, t, Theme.UiBold, Size.Empty, TextFormatFlags.NoPadding);
+                    Color tone = GamesView.Tone(st);
+                    using (var b = new SolidBrush(tone)) g.FillEllipse(b, x, CardsY + BarH / 2 - 3, 6, 6);
+                    TextRenderer.DrawText(g, t, Theme.UiBold, new Rectangle(x + 10, CardsY, sz.Width + 2, BarH), tone, flags);
+                    x += sz.Width + 24;
+                }
+            }
+            string state = _scanning ? (res == null ? "suche ..." : res.Pending > 0 ? (Desk.FullscreenActive() ? "pausiert (Vollbild)" : "prüfe md5, " + res.Pending + " offen") : "") :
+                           res != null ? "geprüft " + res.When.ToString("HH:mm") : "";
+            if (state != "")
+                TextRenderer.DrawText(g, state, Theme.Small, new Rectangle(x, CardsY, Math.Max(10, w - Pad - ClearW - 12 - x), BarH), Theme.Faint,
+                    flags | TextFormatFlags.Right | TextFormatFlags.EndEllipsis);
+            int top = CardsY + BarH + Gap;
+            Surface(g, new RectangleF(Pad, top, inner, h - Foot - top));
+            string foot = res == null ? "Spiele-Datenbank wird beim ersten Prüfen geladen." :
+                string.Format("Datenbank: Stand {0} ({1}, {2} Exes). Gesucht über GOG-Registry, Registry-Hinweise und Desktop-Verknüpfungen; unbekannte Exes werden nicht geprüft.",
+                    res.Db.Stand, res.Db.Source, res.Db.All.Count);
+            TextRenderer.DrawText(g, foot, Theme.Small, new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint,
+                TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
         }
 
         /// <summary>Einheitliche Fläche: Panel-Farbe, 1 px Rand, Radius 8, auf halbe Pixel gesetzt.</summary>

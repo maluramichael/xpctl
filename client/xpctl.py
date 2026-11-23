@@ -32,6 +32,7 @@
   xpctl.py ripiso ZIEL.iso | pesec EXE...                CD als ISO lesen, Kopierschutz-Sektionen
   xpctl.py driver list [FILTER] | install INF [--hwid ID]   Geräte, INF-Treiber (Server v7)
   xpctl.py games [FILTER] [--db DATEI] [--json DATEI]            Spiele-Icons: Exe-Version, GOG-Info, Uninstall (Server v8)
+  xpctl.py gamecheck [--alle] [--fast] [--push-db]               bekannte Spiele: installiert vs. neuester Stand (Server v17)
   Dateien/Prozesse/Discs (Server v9, statt run mit dir/findstr/type/tasklist/taskkill/xcopy/del):
   xpctl.py ls PFAD [-r [TIEFE]] [-p MUSTER...] [--files]   Größe, Datum, Summe
   xpctl.py cat DATEI [-g TEXT|/regex/] [--head N] [--tail N]
@@ -1282,6 +1283,9 @@ def db_lookup(db, g):
 def db_text(e):
     cur = e.get("version", "")
     latest = e.get("latest", "")
+    if e.get("status"):
+        same = e["status"] != "patch"
+        return f"bekannt: {cur}" + (f" ({e['status']})" if same else f", neuester: {latest}"), not same
     same = latest.lower().startswith("gleich") or _core_version(cur) == _core_version(latest)
     return f"bekannt: {cur}" + (" (aktuell)" if same else f", neuester: {latest}"), not same
 
@@ -1302,7 +1306,7 @@ def cmd_games(sock, args):
         g["version_guess"], g["version_source"] = game_version(g) if not g.get("skip") else ("", "")
         hit = db_lookup(db, g) if db and not g.get("skip") else None
         if hit:
-            g["db"] = {k: hit.get(k) for k in ("game", "version", "latest", "confidence")}
+            g["db"] = {k: hit.get(k) for k in ("game", "version", "latest", "confidence", "status")}
     if args.json:
         Path(args.json).write_text(json.dumps(games, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"{len(games)} Verknüpfungen nach {args.json}")
@@ -1550,6 +1554,48 @@ def cmd_uninstall(sock, args):
         print("kein Eintrag")
     return 0
 
+
+
+GAMECHECK_LABEL = {"patch": "Patch da", "unklar": "unklar", "aktuell": "aktuell", "fehlt": "Exe fehlt", "unbekannt": "unbekannt"}
+
+
+def cmd_gamecheck(sock, args):
+    """Bekannte Spiele mit installierter und neuester Version (Server v17, op gamescan)."""
+    if args.push_db:
+        r = rpc(sock, {"op": "ping"})
+        if r is None:
+            return 1
+        db = Path(__file__).resolve().with_name("game-versions.json")
+        target = r["script"].rsplit("\\", 1)[0] + "\\game-versions.json"
+        _put_bytes(sock, db.read_bytes(), target)
+        print(f"Datenbank hochgeladen: {Path(db).name} (Stand {json.loads(db.read_text(encoding='utf-8'))['stand']}). "
+              "Sie gilt nur, wenn ihr Stand neuer ist als der in xpserver.exe eingebaute.")
+    r = rpc(sock, {"op": "gamescan", "hash": not args.fast})
+    if r is None:
+        return 1
+    rows = r["games"]
+    if args.json:
+        print(json.dumps(r, ensure_ascii=False, indent=1))
+        return 0
+    shown = rows if args.alle else [g for g in rows if g["status"] not in ("aktuell", "unbekannt")]
+    for g in shown:
+        lab = GAMECHECK_LABEL.get(g["status"], g["status"])
+        ver = g.get("version") or g.get("problem") or g["exe"].rsplit("\\", 1)[-1]
+        if g.get("confidence") == "niedrig":
+            ver = "? " + ver
+        line = f"{lab:10} {g['name'][:34]:34} {ver[:44]:44}"
+        if g.get("latest") and g["status"] != "aktuell":
+            line += f" -> {g['latest']}"
+        print(line.rstrip())
+    count = {}
+    for g in rows:
+        count[g["status"]] = count.get(g["status"], 0) + 1
+    print(("\n" if shown else "") + ", ".join(f"{count[s]} {GAMECHECK_LABEL[s]}" for s in GAMECHECK_LABEL if s in count)
+          + f"  (Datenbank Stand {r['stand']}, {r['db_source']}; laden {r['db_ms']} ms, suchen {r['find_ms']} ms, "
+          f"md5 {r['hashed']} neu in {r['hash_ms']} ms, {r['cached']} aus dem Cache)")
+    if not args.alle:
+        print("Alle zeigen: --alle")
+    return 0
 
 
 def cmd_ver(sock, args):
@@ -1836,6 +1882,13 @@ def main() -> int:
     p.add_argument("--gog-ssh", action="store_true",
                    help="GOG-Version aus den Setup-Dateinamen auf einem SSH-Host ergänzen (XPCTL_GOG_SSH, XPCTL_GOG_DIR)")
     p.set_defaults(fn=cmd_games)
+
+    p = sub.add_parser("gamecheck", help="bekannte Spiele: installierte und neueste Version (Server v17)")
+    p.add_argument("--alle", action="store_true", help="auch aktuelle und unbekannte zeigen")
+    p.add_argument("--fast", action="store_true", help="ohne md5, nur Exe-Name und Größe")
+    p.add_argument("--push-db", action="store_true", help="vorher client/game-versions.json neben xpserver.exe legen")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_gamecheck)
 
     p = sub.add_parser("ls", help="Dateien mit Größe/Datum (statt run dir)")
     p.add_argument("path")

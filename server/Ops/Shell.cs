@@ -264,7 +264,7 @@ namespace XpServer
             finally { l.Close(); }
         }
 
-        static LinkMap AllLinks()
+        internal static LinkMap AllLinks()
         {
             string au = Common.AllUsersDesktop, me = Common.MyDesktop;
             var map = new LinkMap();
@@ -882,7 +882,7 @@ namespace XpServer
             return found;
         }
 
-        static J LinkGame(string name, string path)
+        internal static J LinkGame(string name, string path)
         {
             var info = LnkRead(path);
             string target = (string)info["target"];
