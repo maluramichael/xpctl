@@ -41,7 +41,7 @@ Der Server führt auf Anforderung beliebige Befehle aus. Wer das Passwort kennt 
 
 | Pfad | Inhalt |
 |---|---|
-| `client/` | `xpctl.py`, Versions- und Kopierschutz-Datenbank, Beispiel für Desktop-Gruppen |
+| `client/` | `xpctl.py`, Spielstand-Formate (`savegames/`) mit Tests, Versions- und Kopierschutz-Datenbank, Beispiel für Desktop-Gruppen |
 | `server/` | Quellcode von `xpserver.exe` (C#), `build.sh`, Beispielkonfiguration, Tests, alter Python-Server unter `legacy-python/` |
 | `docs/` | Protokoll |
 | `tools/` | `wpchanger.pyw`: kleiner Wallpaper-Wechsler für den XP-Rechner (`pythonw wpchanger.pyw ORDNER`, alle 30 Minuten ein zufälliges BMP) |

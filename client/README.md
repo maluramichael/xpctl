@@ -129,6 +129,46 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
 
 `install` verweigert einen nicht leeren Zielordner (ohne `--force`), weil ein Deinstaller den ganzen Ordner löschen kann. Neuere GOG-Installer brechen still an der EULA-Checkbox ab: `install` startet sie dann interaktiv, hakt die Checkbox an und klickt sich bis zum Ende durch. `desk group` lädt den Desktop danach neu, damit geänderte Ordner-Icons sofort erscheinen.
 
+### Spielstände
+
+    ./xpctl.py saves                                  # welche bekannten Spiele installiert sind, Version, Profile
+    ./xpctl.py saves formats                          # alle Spiel- und Versionsklassen
+    ./xpctl.py saves nfsu                             # Profile mit Dateien und Prüfsummen-Status
+    ./xpctl.py saves nfsu show Michael [--json]       # alle Felder eines Profils
+    ./xpctl.py saves nfsu set Michael MOTIONBLUR=0 RES=4 [--dry-run]
+    ./xpctl.py saves nfsu repair Michael              # falsche Prüfsummen neu rechnen
+    ./xpctl.py saves nfsu backup [Michael]            # Profile unverändert sichern
+
+Unterstützt: Need for Speed: Underground (`nfsu`). Grafik und Ton (`.cfg`) lesen und schreiben, Prüfsummen (Adler-32) von Optionen (`.opt`) und Karriere (`.ugd`) prüfen und reparieren, Profilliste (`Profiles.usr`). Das Online-Profil (`.pro`, enthält Zugangsdaten) wird nie angezeigt. Feldnamen dürfen kurz sein (`RES`), solange sie eindeutig sind, sonst mit Datei davor (`opt.checksum`).
+
+Schreiben ist abgesichert:
+
+- nur, wenn die md5 der Spiel-Exe zu einer geprüften Versionsklasse passt. Eine unbekannte Exe heißt: nur lesen.
+- nicht, solange das Spiel läuft (es überschreibt seine Dateien beim Beenden).
+- vorher kommen die alten Dateien nach `C:\xpctl\backup\saves\<spiel>\<Zeitstempel>`. Eine vorhandene Sicherung wird nie überschrieben.
+- danach wird jede Datei zurückgelesen und Byte für Byte verglichen.
+
+Dass NFSU eine von `repair` reparierte `.opt` oder `.ugd` lädt, ist noch nicht im Spiel geprüft.
+
+**Neues Spiel oder neue Version.** Der Code liegt in `client/savegames/`:
+
+- `core.py`: die Schnittstellen. `Remote` (Dateizugriff auf den XP-Rechner), `SaveFile` (eine Datei: `parse`, `serialize`, `fields`, `set`, `problems`, `repair`), `Profile`, `Game`.
+- `nfsu.py`: Beispiel für ein Spiel.
+
+Ein Spiel ist eine Basisklasse von `Game` mit `id`, `title`, `exe`, `locate` (Installationsordner, meist aus der Registry), `save_dir`, `profiles` und `load`. Ohne passende Versionsklasse darf sie nur lesen. Jede geprüfte Exe bekommt eine Unterklasse, deren Name die Version trägt, mit `version` und `exe_md5`:
+
+```python
+class NfsUnderground_20040115(NfsUnderground):
+    version = "Speed.exe 15.01.2004"
+    exe_md5 = frozenset({"95a0cba2466306469a33171e34995d05"})
+```
+
+Unterscheidet sich das Format zwischen Versionen, überschreibt die Versionsklasse nur das Nötige (z. B. `FILES` oder eine Dateiklasse). Das neue Modul in `savegames/__init__.py` importieren, dann erscheint es in `saves` und `saves formats`.
+
+`serialize(parse(x))` muss Byte für Byte `x` ergeben: Bytes, deren Bedeutung unbekannt ist, werden unverändert durchgereicht. Tests mit erzeugten Dateien (keine echten Spielstände ins Repo):
+
+    uv run --no-project python -m unittest discover -s client/tests
+    XPCTL_SAVES_DIR=/tmp/kopien uv run --no-project python -m unittest discover -s client/tests   # plus echte Kopien
 
 ## Server aktualisieren
 
@@ -144,6 +184,7 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
 - `desktop-gruppen.example.txt`: Beispiel für `desk group`.
 - `game-versions.json`: Versionsdatenbank für `games`.
 - `disc-protection.json`: Kopierschutz-Datenbank für `disc`.
+- `savegames/`: Spielstand-Formate für `saves`.
 
 ## Kopierschutz-Datenbank
 

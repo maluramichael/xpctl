@@ -16,6 +16,8 @@
   xpctl.py programs [--all] [--grep TEXT] [--json]   installierte Programme
   xpctl.py sysinfo [--json]                    Windows, CPU, RAM, Laufwerke, IE, DirectX, .NET
   xpctl.py temps [--source acpi,smart,nvidia,hwinfo,speedfan] [--json]   Temperaturen (xpserver.exe)
+  xpctl.py saves [SPIEL [show|set|repair|backup] [PROFIL] [FELD=WERT ...]] [--json] [--dry-run]
+                                               Spielstände und Profile (client/savegames)
   xpctl.py reg KEY [--values] [--recurse N] [--json]   Registry-Schlüssel lesen (HKLM/HKCU/HKU/HKCR)
   xpctl.py settings [--only abschnitt,...] [--paths] [--json]   kuratierte Einstellungen
   xpctl.py productkey --out DATEI              XP-Produktschlüssel nur in Datei (chmod 600)
@@ -62,6 +64,9 @@ import sys
 import time
 import zlib
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import savegames  # noqa: E402  (client/savegames, Spielstände)
 
 MAX_FRAME = 16 * 1024 * 1024
 CHUNK = 256 * 1024
@@ -600,6 +605,207 @@ def cmd_temps(sock, args):
         if msg:
             print(f"  {st['name']}: {msg}")
     return 0
+
+
+class XpRemote:
+    """Dateizugriff für client/savegames über xpserver (eine Verbindung, mehrere Ops)."""
+
+    def __init__(self, sock):
+        self.sock = sock
+
+    def _call(self, req):
+        send_json(self.sock, req)
+        return recv_json(self.sock)
+
+    def read(self, path):
+        send_json(self.sock, {"op": "get", "path": path})
+        r = recv_json(self.sock)
+        if not r.get("ready"):
+            raise savegames.SaveError(f"{path}: {r.get('error')}")
+        buf = bytearray()
+        while len(buf) < r["size"]:
+            buf += recv_frame(self.sock)
+        end = recv_json(self.sock)
+        if not end.get("ok") or end["sha256"] != hashlib.sha256(buf).hexdigest():
+            raise savegames.SaveError(f"{path}: Prüfsumme der Übertragung stimmt nicht")
+        return bytes(buf)
+
+    def write(self, path, data, mkdir=False):
+        send_json(self.sock, {"op": "put", "path": path, "size": len(data),
+                              "name": path.rsplit("\\", 1)[-1], "mkdir": mkdir})
+        r = recv_json(self.sock)
+        if not r.get("ready"):
+            raise savegames.SaveError(f"{path}: {r.get('error')}")
+        for i in range(0, len(data), CHUNK):
+            send_frame(self.sock, data[i:i + CHUNK])
+        r = recv_json(self.sock)
+        if not r.get("ok") or r.get("sha256") != hashlib.sha256(data).hexdigest():
+            raise savegames.SaveError(f"{path}: {r.get('error') or 'Prüfsumme der Übertragung falsch'}")
+
+    def files(self, folder):
+        r = self._call({"op": "ls", "path": folder, "files_only": True})
+        if not r.get("ok"):
+            return []
+        return [savegames.Entry(e["path"].rsplit("\\", 1)[-1], e.get("size", 0), e.get("mtime", ""))
+                for e in r["entries"] if not e.get("dir") and not e.get("error")]
+
+    def md5(self, path):
+        r = self._call({"op": "hash", "paths": [path], "algo": "md5"})
+        h = (r.get("hashes") or {}).get(path, "") if r.get("ok") else ""
+        return h if re.fullmatch(r"[0-9a-f]{32}", h or "") else None
+
+    def running(self, exe_name):
+        r = self._call({"op": "ps", "filter": exe_name})
+        return any(p["name"].lower() == exe_name.lower() for p in r.get("procs", []))
+
+    def reg(self, key, name):
+        r = self._call({"op": "reg", "key": key, "values": True, "recurse": 0})
+        if not r.get("ok"):
+            return None
+        for v in r["tree"].get("values", []):
+            if v.get("name", "").lower() == name.lower():
+                return str(v.get("data"))
+        return None
+
+
+SAVES_BACKUP = r"C:\xpctl\backup\saves"
+
+
+def _saves_overview(rem, as_json):
+    rows = []
+    for fam in savegames.games():
+        g = savegames.resolve(rem, fam)
+        row = {"id": fam.id, "title": fam.title, "installed": g is not None}
+        if g is not None:
+            row.update(install_dir=g.install_dir, version=g.version_text, writable=g.writable,
+                       profiles=g.profiles())
+        rows.append(row)
+    if as_json:
+        print(json.dumps(rows, ensure_ascii=False, indent=1))
+        return 0
+    for r in rows:
+        if not r["installed"]:
+            print(f"{r['id']:<8} {r['title']}: nicht installiert")
+            continue
+        print(f"{r['id']:<8} {r['title']}  [{r['version']}]")
+        print(f"         {len(r['profiles'])} Profile: {', '.join(r['profiles']) or '-'}")
+    print("\nDetails: xpctl.py saves SPIEL [PROFIL]   Formate: xpctl.py saves formats")
+    return 0
+
+
+def _saves_formats():
+    for fam in savegames.games():
+        print(f"{fam.id:<8} {fam.title}  (Klasse {fam.__name__}, ohne bekannte Exe nur lesen)")
+        for v in savegames.versions(fam):
+            print(f"         {v.__name__}: {v.version}, md5 {', '.join(sorted(v.exe_md5))}")
+    return 0
+
+
+def _field_json(f, x):
+    return {"file": f.name, "key": f"{f.kind}.{x.key}", "label": x.label, "value": x.value,
+            "shown": x.shown(), "writable": x.writable, "verified": x.verified, "note": x.note}
+
+
+def _print_profile(g, p):
+    print(f"{g.title}, Profil {p.name}  [{g.version_text}]")
+    for f in p.files:
+        if f.sensitive:
+            print(f"\n  {f.name}: {f.label}")
+            continue
+        print(f"\n  {f.name} ({f.label}, {len(f.original)} Byte)")
+        for x in f.fields():
+            flags = ("schreibbar" if x.writable else "") + (", im Spiel geprüft" if x.verified and x.writable else "")
+            note = f"  [{x.note}]" if x.note else ""
+            print(f"    {f.kind + '.' + x.key:<22} {x.label:<28} {x.shown()}{note}" + (f"  ({flags})" if flags else ""))
+    probs = p.problems()
+    if probs:
+        print("\n  Probleme:")
+        for f, msg in probs:
+            print(f"    {f.name}: {msg}")
+        print("  Reparieren: xpctl.py saves " + g.id + " repair " + p.name)
+
+
+def cmd_saves(sock, args):
+    rem = XpRemote(sock)
+    try:
+        if not args.game:
+            return _saves_overview(rem, args.json)
+        if args.game == "formats":
+            return _saves_formats()
+        fam = savegames.find_game(args.game)
+        g = savegames.resolve(rem, fam)
+        if g is None:
+            print(f"{fam.title} ist auf diesem Rechner nicht installiert (oder die Registry kennt es nicht)")
+            return 1
+        action, prof = args.action, args.profile
+        if action and action not in ("show", "set", "repair", "backup"):
+            action, prof = "show", action              # saves nfsu Michael
+        if not action:
+            names = g.profiles()
+            if args.json:
+                print(json.dumps({"game": fam.id, "version": g.version_text, "writable": g.writable,
+                                  "save_dir": g.save_dir(), "profiles": names}, ensure_ascii=False, indent=1))
+                return 0
+            print(f"{g.title}  [{g.version_text}]\n  Ordner: {g.save_dir()}")
+            for n in names:
+                p = g.load(n)
+                probs = p.problems()
+                state = "ok" if not probs else f"{len(probs)} Problem(e)"
+                print(f"  {n:<16} {', '.join(f.name for f in p.files)}  [{state}]")
+            for note in fam.notes:
+                print(f"\n  Hinweis: {note}")
+            return 0
+        if action == "backup":
+            names = [prof] if prof else g.profiles()
+            bdir, done = g.backup(names, SAVES_BACKUP)
+            print(f"{len(done)} Dateien gesichert nach {bdir}")
+            return 0
+        if not prof:
+            print(f"Profil fehlt. Vorhanden: {', '.join(g.profiles())}", file=sys.stderr)
+            return 2
+        p = g.load(prof)
+        if action == "show":
+            if args.json:
+                print(json.dumps({"game": fam.id, "version": g.version_text, "profile": p.name,
+                                  "fields": [_field_json(f, x) for f, x in p.fields()],
+                                  "files": [{"name": f.name, "kind": f.kind, "size": len(f.original),
+                                             "sensitive": f.sensitive} for f in p.files],
+                                  "problems": [f"{f.name}: {m}" for f, m in p.problems()]},
+                                 ensure_ascii=False, indent=1))
+            else:
+                _print_profile(g, p)
+            return 0
+        if action == "set":
+            if not args.assign:
+                print("set braucht FELD=WERT", file=sys.stderr)
+                return 2
+            for a in args.assign:
+                if "=" not in a:
+                    print(f"{a}: FELD=WERT erwartet", file=sys.stderr)
+                    return 2
+                k, v = a.split("=", 1)
+                before = p.find(k)[1].shown()
+                p.set(k.strip(), v.strip())
+                print(f"  {k}: {before} -> {p.find(k)[1].shown()}")
+        else:  # repair
+            fixed = [f.name for f in p.files if not f.sensitive and f.repair()]
+            if not fixed:
+                print("nichts zu reparieren")
+                return 0
+            print("  repariert: " + ", ".join(fixed) + " (dass das Spiel reparierte Binärdateien annimmt, ist nicht geprüft)")
+        if args.dry_run:
+            print("--dry-run: nichts geschrieben (" + ", ".join(f.name for f in p.dirty()) + ")")
+            return 0
+        bdir, written = g.store(p, SAVES_BACKUP)
+        if not written:
+            print("keine Änderung")
+            return 0
+        print(f"geschrieben und zurückgelesen: {', '.join(w.rsplit(chr(92), 1)[-1] for w in written)}")
+        print(f"Sicherung der alten Dateien: {bdir}")
+        return 0
+    except savegames.SaveError as e:
+        print(f"Fehler: {e}", file=sys.stderr)
+        return 1
 
 
 def cmd_sysinfo(sock, args):
@@ -1737,6 +1943,15 @@ def main() -> int:
                    help="nur diese Quelle(n), kommagetrennt oder mehrfach: " + ", ".join(TEMP_SOURCES))
     p.add_argument("--json", action="store_true")
     p.set_defaults(fn=cmd_temps)
+
+    p = sub.add_parser("saves", help="Spielstände und Profile lesen und ändern (pro Spiel und Exe-Version)")
+    p.add_argument("game", nargs="?", help="Spiel-Id (z. B. nfsu) oder 'formats'; ohne: Übersicht")
+    p.add_argument("action", nargs="?", help="show, set, repair, backup (oder direkt ein Profilname)")
+    p.add_argument("profile", nargs="?")
+    p.add_argument("assign", nargs="*", metavar="FELD=WERT")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--dry-run", action="store_true", help="nur zeigen, was sich ändern würde")
+    p.set_defaults(fn=cmd_saves)
 
     p = sub.add_parser("reg", help="Registry-Schlüssel lesen (nur lesen)")
     p.add_argument("key", help=r"z.B. HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
