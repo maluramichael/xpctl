@@ -22,6 +22,7 @@ Aufbau von ``.d2s`` (Version 0x60 = Patch 1.10 bis 1.14d):
 Breiten und Klassen aus github.com/nokka/d2s (attributes.go, class.go, status.go). An einem echten
 1.14d-Charakter geprüft: Prüfsumme, Kopf, Ende der Werte-Sektion direkt vor ``if``, Level im Kopf
 gleich Level-Wert. Werte, die in jener Datei nicht vorkamen, sind nur aus der Quelle übernommen.
+Im Spiel geprüft: eine mit ``set strength`` geänderte Datei lädt und zeigt den neuen Wert.
 """
 from __future__ import annotations
 
@@ -57,6 +58,8 @@ STATS = {
     15: ("goldbank", "Gold (Truhe)", 25, 1, True),
 }
 _BY_KEY = {v[0]: k for k, v in STATS.items()}
+# Geändert, gespeichert und im Spiel so angezeigt (1.14d, 2026-11-23: Stärke 10 -> 11).
+VERIFIED_IN_GAME = {"strength"}
 
 
 def checksum(data: bytes) -> int:
@@ -198,7 +201,7 @@ class D2s(SaveFile):
             v = present[sid]
             shown = v // div if div > 1 else v
             note = "" if div == 1 else "Festkomma /256, gerundet"
-            out.append(Field(key, label, shown, writable=w, note=note))
+            out.append(Field(key, label, shown, writable=w, verified=key in VERIFIED_IN_GAME, note=note))
         return out
 
     def set(self, key: str, value: str) -> None:

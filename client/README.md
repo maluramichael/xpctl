@@ -143,7 +143,7 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
 
 Unterstützt:
 
-- Diablo II / Lord of Destruction 1.14d (`d2`): Charakter (`.d2s`) mit Klasse, Level, Status, Schwierigkeit, Attributen, Leben/Mana, Erfahrung und Gold. Schreibbar sind Attribute, freie Punkte und Gold, aber nur Werte, die schon in der Datei stehen (ein Wert 0 fehlt dort und müsste eingefügt werden). Level und Erfahrung bleiben nur lesbar. Die Prüfsumme wird beim Schreiben neu gerechnet.
+- Diablo II / Lord of Destruction 1.14d (`d2`): Charakter (`.d2s`) mit Klasse, Level, Status, Schwierigkeit, Attributen, Leben/Mana, Erfahrung und Gold. Schreibbar sind Attribute, freie Punkte und Gold, aber nur Werte, die schon in der Datei stehen (ein Wert 0 fehlt dort und müsste eingefügt werden). Level und Erfahrung bleiben nur lesbar. Die Prüfsumme wird beim Schreiben neu gerechnet. Im Spiel geprüft: ein mit `set strength=...` geänderter Charakter lädt und zeigt den neuen Wert.
 - Need for Speed: Underground (`nfsu`): Grafik und Ton (`.cfg`) lesen und schreiben, Prüfsummen (Adler-32) von Optionen (`.opt`) und Karriere (`.ugd`) prüfen und reparieren, Profilliste (`Profiles.usr`). Das Online-Profil (`.pro`, enthält Zugangsdaten) wird nie angezeigt. Feldnamen dürfen kurz sein (`RES`), solange sie eindeutig sind, sonst mit Datei davor (`opt.checksum`).
 
 Schreiben ist abgesichert:
