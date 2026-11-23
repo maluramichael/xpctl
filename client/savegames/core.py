@@ -285,15 +285,24 @@ class Game(ABC):
             bdir = f"{base}-{n}"
         return bdir
 
-    def backup(self, names: Iterable[str], backup_root: str) -> tuple[str, list[str]]:
-        """Kopiert alle Dateien der Profile unverändert in einen Sicherungsordner."""
+    def shared_files(self) -> list[str]:
+        """Dateinamen im Spielstand-Ordner, die zu allen Profilen gehören (z. B. eine Profilliste)."""
+        return []
+
+    def backup(self, names: Iterable[str] | None, backup_root: str) -> tuple[str, list[str]]:
+        """Kopiert Dateien unverändert in einen neuen Sicherungsordner. Ohne Namen: alles im
+        Spielstand-Ordner. Mit Namen: die Dateien dieser Profile plus ``shared_files``."""
         bdir = self._fresh_backup_dir(backup_root)
-        done = []
-        for n in names:
-            for f in self.load(n).files:
-                self.remote.write(join(bdir, f.name), f.original, mkdir=True)
-                done.append(f.name)
-        return bdir, done
+        folder = self.save_dir()
+        present = {e.name.lower(): e.name for e in self.remote.files(folder)}
+        if names is None:
+            wanted = sorted(present.values(), key=str.lower)
+        else:
+            wanted = [f.name for n in names for f in self.load(n).files]
+            wanted += [present[s.lower()] for s in self.shared_files() if s.lower() in present]
+        for name in dict.fromkeys(wanted):
+            self.remote.write(join(bdir, name), self.remote.read(join(folder, name)), mkdir=True)
+        return bdir, list(dict.fromkeys(wanted))
 
 
 def games() -> list[type[Game]]:

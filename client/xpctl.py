@@ -65,9 +65,6 @@ import time
 import zlib
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import savegames  # noqa: E402  (client/savegames, Spielstände)
-
 MAX_FRAME = 16 * 1024 * 1024
 CHUNK = 256 * 1024
 
@@ -607,8 +604,20 @@ def cmd_temps(sock, args):
     return 0
 
 
+def _savegames():
+    """client/savegames erst bei Bedarf laden: eine einzeln kopierte xpctl.py läuft auch ohne."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        import savegames
+    except ImportError:
+        sys.exit("saves braucht den Ordner savegames/ neben xpctl.py (aus dem Repo, client/savegames)")
+    globals()["savegames"] = savegames
+    return savegames
+
+
 class XpRemote:
-    """Dateizugriff für client/savegames über xpserver (eine Verbindung, mehrere Ops)."""
+    """Dateizugriff für client/savegames über xpserver (eine Verbindung, mehrere Ops).
+    Erfüllt die Schnittstelle savegames.Remote."""
 
     def __init__(self, sock):
         self.sock = sock
@@ -656,6 +665,8 @@ class XpRemote:
 
     def running(self, exe_name):
         r = self._call({"op": "ps", "filter": exe_name})
+        if not r.get("ok"):
+            raise savegames.SaveError(f"Prozessliste nicht lesbar ({r.get('error')}), schreibe vorsichtshalber nicht")
         return any(p["name"].lower() == exe_name.lower() for p in r.get("procs", []))
 
     def reg(self, key, name):
@@ -726,6 +737,8 @@ def _print_profile(g, p):
 
 
 def cmd_saves(sock, args):
+    _savegames()
+    savegames.Remote.register(XpRemote)
     rem = XpRemote(sock)
     try:
         if not args.game:
@@ -756,8 +769,7 @@ def cmd_saves(sock, args):
                 print(f"\n  Hinweis: {note}")
             return 0
         if action == "backup":
-            names = [prof] if prof else g.profiles()
-            bdir, done = g.backup(names, SAVES_BACKUP)
+            bdir, done = g.backup([prof] if prof else None, SAVES_BACKUP)
             print(f"{len(done)} Dateien gesichert nach {bdir}")
             return 0
         if not prof:

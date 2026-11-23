@@ -65,7 +65,7 @@ class FakeRemote(Remote):
 
     def files(self, folder):
         pre = folder.lower().rstrip("\\") + "\\"
-        return [Entry(k[len(pre):] if False else real.rsplit("\\", 1)[1], len(v), "")
+        return [Entry(real.rsplit("\\", 1)[1], len(v), "")
                 for k, (real, v) in self.fs.items() if k.startswith(pre) and "\\" not in k[len(pre):]]
 
     def md5(self, path):
@@ -84,14 +84,14 @@ class FakeRemote(Remote):
 
 def nfsu_files() -> dict[str, bytes]:
     return {
-        SAVES + r"\Profiles.usr": usr("Michael", "endless90"),
-        SAVES + r"\Michael.cfg": cfg(RES=3, MOTIONBLUR=1),
-        SAVES + r"\Michael.opt": adler_file(749, 4, 8, b"Michael"),
-        SAVES + r"\Michael0.ugd": adler_file(63123, 47, 4, b"Michael", fill=3),
-        SAVES + r"\Michael_autosave.ugd": adler_file(63123, 47, 4, b"auto", fill=5),
-        SAVES + r"\Michael0.pro": b"\x01\0\0\0\0\0\0\0geheim123\0" + b"\0" * 20,
-        SAVES + r"\endless90.cfg": cfg(),
-        SAVES + r"\endless90.opt": adler_file(749, 4, 8, b"endless90"),
+        SAVES + r"\Profiles.usr": usr("Spieler", "Gast"),
+        SAVES + r"\Spieler.cfg": cfg(RES=3, MOTIONBLUR=1),
+        SAVES + r"\Spieler.opt": adler_file(749, 4, 8, b"Spieler"),
+        SAVES + r"\Spieler0.ugd": adler_file(63123, 47, 4, b"Spieler", fill=3),
+        SAVES + r"\Spieler_autosave.ugd": adler_file(63123, 47, 4, b"auto", fill=5),
+        SAVES + r"\Spieler0.pro": b"\x01\0\0\0\0\0\0\0geheim123\0" + b"\0" * 20,
+        SAVES + r"\Gast.cfg": cfg(),
+        SAVES + r"\Gast.opt": adler_file(749, 4, 8, b"Gast"),
     }
 
 
@@ -129,10 +129,10 @@ class FormatTest(unittest.TestCase):
 
     def test_adler_ok_broken_repair(self):
         for cls, size, start, at in ((NfsuOpt, 749, 4, 8), (NfsuUgd, 63123, 47, 4)):
-            raw = adler_file(size, start, at, b"Michael")
+            raw = adler_file(size, start, at, b"Spieler")
             f = cls("x", raw)
             self.assertEqual(f.problems(), [])
-            self.assertEqual(f.head_name(), "Michael")
+            self.assertEqual(f.head_name(), "Spieler")
             self.assertEqual(f.serialize(), raw)
             # Byte vor dem Prüfbereich ändern: Prüfsumme bleibt gültig
             b = bytearray(raw)
@@ -148,8 +148,8 @@ class FormatTest(unittest.TestCase):
             self.assertFalse(g.repair())
 
     def test_profiles_usr(self):
-        f = NfsuProfiles("Profiles.usr", usr("Michael", "endless90"))
-        self.assertEqual(f.names, ["Michael", "endless90"])
+        f = NfsuProfiles("Profiles.usr", usr("Spieler", "Gast"))
+        self.assertEqual(f.names, ["Spieler", "Gast"])
         self.assertEqual(f.problems(), [])
         self.assertEqual(NfsuProfiles("p", usr("a")[:-3]).problems()[0][:5], "Größe")
 
@@ -159,21 +159,21 @@ class GameTest(unittest.TestCase):
         g = resolve(FakeRemote(nfsu_files()), NfsUnderground)
         self.assertIsInstance(g, NfsUnderground_20040115)
         self.assertTrue(g.writable)
-        self.assertEqual(g.profiles(), ["Michael", "endless90"])
+        self.assertEqual(g.profiles(), ["Spieler", "Gast"])
 
     def test_resolve_unknown_exe_is_readonly(self):
         g = resolve(FakeRemote(nfsu_files(), md5="0" * 32), NfsUnderground)
         self.assertIs(type(g), NfsUnderground)
         self.assertFalse(g.writable)
-        p = g.load("Michael")
+        p = g.load("Spieler")
         p.set("RES", "4")
         with self.assertRaises(SaveError):
             g.store(p, r"C:\xpctl\backup\saves")
 
     def test_load_profile_and_hide_online(self):
         g = resolve(FakeRemote(nfsu_files()), NfsUnderground)
-        p = g.load("michael")
-        self.assertEqual(p.name, "Michael")
+        p = g.load("spieler")
+        self.assertEqual(p.name, "Spieler")
         kinds = [f.kind for f in p.files]
         self.assertEqual(kinds, ["cfg", "opt", "ugd", "autosave", "online"])
         shown = " ".join(str(x.value) for _, x in p.fields())
@@ -181,7 +181,7 @@ class GameTest(unittest.TestCase):
         self.assertEqual(p.problems(), [])
 
     def test_ambiguous_and_unknown_field(self):
-        p = resolve(FakeRemote(nfsu_files()), NfsUnderground).load("Michael")
+        p = resolve(FakeRemote(nfsu_files()), NfsUnderground).load("Spieler")
         with self.assertRaises(SaveError):
             p.find("checksum")            # in opt, ugd und autosave
         self.assertEqual(p.find("opt.checksum")[0].kind, "opt")
@@ -193,33 +193,50 @@ class GameTest(unittest.TestCase):
     def test_store_backup_then_write_and_verify(self):
         r = FakeRemote(nfsu_files())
         g = resolve(r, NfsUnderground)
-        p = g.load("Michael")
+        p = g.load("Spieler")
         before = p.file("cfg").original
         p.set("MOTIONBLUR", "0")
         bdir, written = g.store(p, r"C:\xpctl\backup\saves")
-        self.assertEqual(written, [SAVES + r"\Michael.cfg"])
+        self.assertEqual(written, [SAVES + r"\Spieler.cfg"])
         self.assertTrue(bdir.startswith(r"C:\xpctl\backup\saves\nfsu" + "\\"))
-        self.assertEqual(r.read(bdir + r"\Michael.cfg"), before)
-        self.assertIn(b"MOTIONBLUR: 0", r.read(SAVES + r"\Michael.cfg"))
-        self.assertEqual(r.writes[0], bdir + r"\Michael.cfg")     # Sicherung zuerst
+        self.assertEqual(r.read(bdir + r"\Spieler.cfg"), before)
+        self.assertIn(b"MOTIONBLUR: 0", r.read(SAVES + r"\Spieler.cfg"))
+        self.assertEqual(r.writes[0], bdir + r"\Spieler.cfg")     # Sicherung zuerst
         self.assertEqual(g.store(p, r"C:\xpctl\backup\saves"), ("", []))  # nichts mehr zu tun
 
     def test_backup_never_overwritten(self):
         r = FakeRemote(nfsu_files())
         g = resolve(r, NfsUnderground)
-        p = g.load("Michael")
+        p = g.load("Spieler")
         p.set("MOTIONBLUR", "0")
         b1, _ = g.store(p, r"C:\xpctl\backup\saves")
         p.set("MOTIONBLUR", "1")
         b2, _ = g.store(p, r"C:\xpctl\backup\saves")   # gleiche Sekunde
         self.assertNotEqual(b1, b2)
-        self.assertIn(b"MOTIONBLUR: 1", r.read(b1 + r"\Michael.cfg"))   # erste Sicherung = Ursprung
-        self.assertIn(b"MOTIONBLUR: 0", r.read(b2 + r"\Michael.cfg"))
+        self.assertIn(b"MOTIONBLUR: 1", r.read(b1 + r"\Spieler.cfg"))   # erste Sicherung = Ursprung
+        self.assertIn(b"MOTIONBLUR: 0", r.read(b2 + r"\Spieler.cfg"))
+
+    def test_backup_all_files_without_profile(self):
+        files = nfsu_files()
+        files[SAVES + r"\Spieler.cfg.alt"] = b"irgendwas"
+        r = FakeRemote(files)
+        g = resolve(r, NfsUnderground)
+        bdir, done = g.backup(None, r"C:\xpctl\backup\saves")
+        self.assertEqual(len(done), len(files))
+        self.assertIn("Spieler.cfg.alt", done)
+        self.assertIn("Spieler0.pro", done)     # Sicherung ist vollständig, angezeigt wird sie nicht
+        self.assertEqual(r.read(bdir + r"\Profiles.usr"), files[SAVES + r"\Profiles.usr"])
+
+    def test_backup_one_profile_includes_profile_list(self):
+        r = FakeRemote(nfsu_files())
+        g = resolve(r, NfsUnderground)
+        _, done = g.backup(["Gast"], r"C:\xpctl\backup\saves")
+        self.assertEqual(sorted(done), ["Gast.cfg", "Gast.opt", "Profiles.usr"])
 
     def test_store_refuses_while_running(self):
         r = FakeRemote(nfsu_files(), running=True)
         g = resolve(r, NfsUnderground)
-        p = g.load("Michael")
+        p = g.load("Spieler")
         p.set("RES", "4")
         with self.assertRaises(SaveError):
             g.store(p, r"C:\xpctl\backup\saves")

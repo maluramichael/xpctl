@@ -207,9 +207,9 @@ class NfsUnderground(Game):
     title = "Need for Speed: Underground"
     exe = "Speed.exe"
     notes = [
-        "Stürzt das Spiel beim Laden eines Profils ab, liegt es oft an einer Grafikeinstellung in "
-        "der .cfg (gesehen: RES 3, ENVMAP 3, MOTIONBLUR 1, LIGHTSTREAKS 1 auf GeForce 7800 GTX). "
-        "Test: Werte eines frischen Profils übernehmen.",
+        "Ein Absturz beim Laden eines Profils lag einmal an einer Grafikeinstellung in der .cfg "
+        "(RES 3, ENVMAP 3, MOTIONBLUR 1, LIGHTSTREAKS 1 auf einer GeForce 7800 GTX). "
+        "Test: die Werte eines frischen Profils übernehmen.",
     ]
 
     @classmethod
@@ -219,6 +219,9 @@ class NfsUnderground(Game):
             if d:
                 return d.rstrip("\\")
         return None
+
+    def shared_files(self) -> list[str]:
+        return ["Profiles.usr"]
 
     def save_dir(self) -> str:
         base = self.remote.reg(SHELL_FOLDERS, "Common AppData")

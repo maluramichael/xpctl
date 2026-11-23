@@ -134,10 +134,10 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
     ./xpctl.py saves                                  # welche bekannten Spiele installiert sind, Version, Profile
     ./xpctl.py saves formats                          # alle Spiel- und Versionsklassen
     ./xpctl.py saves nfsu                             # Profile mit Dateien und Prüfsummen-Status
-    ./xpctl.py saves nfsu show Michael [--json]       # alle Felder eines Profils
-    ./xpctl.py saves nfsu set Michael MOTIONBLUR=0 RES=4 [--dry-run]
-    ./xpctl.py saves nfsu repair Michael              # falsche Prüfsummen neu rechnen
-    ./xpctl.py saves nfsu backup [Michael]            # Profile unverändert sichern
+    ./xpctl.py saves nfsu show Spieler [--json]       # alle Felder eines Profils
+    ./xpctl.py saves nfsu set Spieler MOTIONBLUR=0 RES=4 [--dry-run]
+    ./xpctl.py saves nfsu repair Spieler              # falsche Prüfsummen neu rechnen
+    ./xpctl.py saves nfsu backup [Spieler]            # Profile unverändert sichern
 
 Unterstützt: Need for Speed: Underground (`nfsu`). Grafik und Ton (`.cfg`) lesen und schreiben, Prüfsummen (Adler-32) von Optionen (`.opt`) und Karriere (`.ugd`) prüfen und reparieren, Profilliste (`Profiles.usr`). Das Online-Profil (`.pro`, enthält Zugangsdaten) wird nie angezeigt. Feldnamen dürfen kurz sein (`RES`), solange sie eindeutig sind, sonst mit Datei davor (`opt.checksum`).
 
