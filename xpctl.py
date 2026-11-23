@@ -37,6 +37,10 @@
   xpctl.py setupapi [-g TEXT] [--last N]   letzte Treiberinstallationen aus setupapi.log
   xpctl.py uninstall NAME [--run]          Uninstall-Eintrag zeigen, mit --run Deinstaller starten
   xpctl.py ver DATEI...                    VERSIONINFO, Größe, Datum, md5
+  xpctl.py toc [--drive E:] | ripcd ORDNER NAME   Spuren zeigen / Mixed-Mode-CD als CUE+ISO+BIN rippen
+  xpctl.py nv [vsync on|off|app] [triplebuffer on|off]  globale NVIDIA-3D-Einstellungen
+  xpctl.py ini KEY DATEI... [-s ABSCHNITT] [-v WERT]   INI/CONF-Wert lesen/setzen
+  xpctl.py install SETUP ZIEL [--kind] [--force]   Installer still (Inno/NSIS/MSI, GOG-EULA), Log geprüft
 
 Host: --host oder XPCTL_HOST (Pflicht), Port 5050 (XPCTL_PORT).
 Passwort: XPCTL_KEY oder die Datei aus XPCTL_KEY_FILE (Standard: Datei "key" im Ordner xpctl der Benutzer-Konfiguration).
@@ -596,6 +600,8 @@ def cmd_close(sock, args):
     return 0 if rpc(sock, {"op": "close", "hwnd": int(args.hwnd, 0)}) else 1
 
 
+BUTTON_CLASSES = ("button", "tnewbutton", "tbutton")
+
 GROUPS_FILE = Path(os.environ["XPCTL_GROUPS"]) if os.environ.get("XPCTL_GROUPS") else None
 
 
@@ -1033,6 +1039,87 @@ def cmd_setupapi(sock, args):
     return 0
 
 
+def _find_window(sock, pattern):
+    import re
+    top = rpc(sock, {"op": "ui"})
+    pat = re.compile(pattern, re.I)
+    for w in (top or {}).get("windows", []):
+        if pat.search(w["text"]) or pat.search(w["exe"]):
+            return w
+    return None
+
+
+def _press_label(sock, window, labels):
+    w = _find_window(sock, window)
+    if not w:
+        return None
+    r = rpc(sock, {"op": "ui", "hwnd": w["hwnd"]})
+    for c in (r or {}).get("controls", []):
+        if c["class"].lower() in BUTTON_CLASSES and c["enabled"] and _label_norm(c["text"]) in labels:
+            rpc(sock, {"op": "press", "hwnd": c["hwnd"]})
+            return c["text"]
+    return None
+
+
+def _install_eula(sock, args, res):
+    """GOG-Inno mit EULA-Checkbox: interaktiv starten, Checkbox anklicken, Installieren, am Ende Verlassen."""
+    cmd = f'"{args.setup}" /SP- /LANG={args.lang} "/DIR={args.dir}" "/LOG={res["log"]}"'
+    rpc(sock, {"op": "run", "cmd": cmd, "detach": True})
+    w = None
+    for _ in range(60):
+        time.sleep(2)
+        w = _find_window(sock, r"\.tmp$")
+        if w and w["rect"][2] - w["rect"][0] > 300:
+            break
+    if not w:
+        print("Setup-Fenster nicht gefunden", file=sys.stderr)
+        return 1
+    l, t, rgt, b = w["rect"]
+    rpc(sock, {"op": "click", "x": (l + rgt) // 2 - 88, "y": b - 28, "button": "left"})
+    time.sleep(1)
+    if not _press_label(sock, r"\.tmp$", {"installieren", "install"}):
+        print("Button Installieren nicht gefunden (Checkbox nicht getroffen?), per shot prüfen", file=sys.stderr)
+        return 1
+    print("EULA angehakt, installiere ...")
+    deadline = time.time() + args.timeout
+    while time.time() < deadline:
+        time.sleep(5)
+        r = rpc(sock, {"op": "cat", "path": res["log"], "tail": 5})
+        text = "\n".join((r or {}).get("lines", []))
+        if "Current Page: Finished" in text or "Log closed" in text:
+            break
+    _press_label(sock, r"\.tmp$", {"verlassen", "exit", "fertigstellen", "finish"})
+    r = rpc(sock, {"op": "cat", "path": res["log"], "grep": "Installation process succeeded"})
+    ok = bool(r and r.get("lines"))
+    print("fertig: Installation process succeeded" if ok else f"nicht bestätigt, Log prüfen: {res['log']}")
+    return 0 if ok else 1
+
+
+def cmd_install(sock, args):
+    req = {"op": "install", "setup": args.setup, "dir": args.dir, "kind": args.kind, "lang": args.lang,
+           "args": args.args, "force": args.force, "timeout": args.timeout, "detect_only": args.detect}
+    r = rpc(sock, req)
+    if r is None:
+        return 1
+    if args.detect:
+        print(f"Typ: {r['kind']}")
+        return 0
+    if r["status"] == "unbekannt":
+        print(f"Typ {r['kind']}: {r['hint']}")
+        return 1
+    print(f"Typ {r['kind']}, {r['seconds']} s, Exit {r['exit']}, {r['files']} Dateien in {args.dir}, Log {r['log']}")
+    if r["status"] == "eula":
+        print("Silent an der EULA-Seite abgebrochen (GOG), interaktiv mit Checkbox")
+        return _install_eula(sock, args, r)
+    if r["status"] != "ok":
+        print("FEHLER, Log-Ende:")
+        for l in r["tail"]:
+            print("  " + l)
+        return 1
+    print("ok")
+    return 0
+
+
 def cmd_uninstall(sock, args):
     r = rpc(sock, {"op": "uninstall", "name": args.name, "run": args.run})
     if r is None:
@@ -1064,6 +1151,58 @@ def cmd_ver(sock, args):
     return 0
 
 
+def cmd_ini(sock, args):
+    rc = 0
+    for path in args.files:
+        r = rpc(sock, {"op": "ini", "path": path, "section": args.section, "key": args.key, "value": args.value})
+        if r is None:
+            rc = 1
+            continue
+        if args.value is None:
+            print(f"{path}: {args.key}={r['old']}")
+        elif r["changed"]:
+            print(f"{path}: {args.key} {r['old']} -> {args.value} (Sicherung {r['backup']})")
+        else:
+            print(f"{path}: {args.key} schon {args.value}")
+    return rc
+
+
+def cmd_nv(sock, args):
+    req = {"op": "nv"}
+    if args.setting and args.value:
+        req["set"] = [args.setting, args.value]
+    elif args.setting:
+        req["names"] = [args.setting]
+    r = rpc(sock, req)
+    if r is None:
+        return 1
+    for k, v in r["settings"].items():
+        print(f"{k}: {v}")
+    return 0
+
+
+def cmd_toc(sock, args):
+    r = rpc(sock, {"op": "toc", "drive": args.drive})
+    if r is None:
+        return 1
+    print(f"{args.drive} Label {r['label']}")
+    for t in r["tracks"]:
+        kind = "Daten" if t["data"] else "Audio"
+        print(f"  Spur {t['track']:2d} {kind:5s} LBA {t['lba']:6d}  {t['sectors']:6d} Sektoren  {t['sectors'] / 75 / 60:5.1f} min")
+    return 0
+
+
+def cmd_ripcd(sock, args):
+    r = rpc(sock, {"op": "ripcd", "drive": args.drive, "folder": args.folder, "name": args.name})
+    if r is None:
+        return 1
+    print(f"{r['cue']}: Label {r['label']}, {len(r['tracks'])} Spuren, {r['seconds']} s")
+    for t in r["tracks"]:
+        bad = f"  {t['bad']} unlesbar ({t['bad_range'][0]}-{t['bad_range'][1]}), Nullen" if t["bad"] else ""
+        print(f"  {t['file']}: {t['sectors']} Sektoren md5 {t['md5']}{bad}")
+    return 0
+
+
 def _label_norm(s):
     return " ".join(s.replace("&", "").split()).lower()
 
@@ -1090,7 +1229,7 @@ def cmd_press(sock, args):
         r = rpc(sock, {"op": "ui", "hwnd": w["hwnd"]})
         if r is None:
             continue
-        hit = next((c for c in r["controls"] if c["class"].lower() == "button" and c["enabled"]
+        hit = next((c for c in r["controls"] if c["class"].lower() in BUTTON_CLASSES and c["enabled"]
                     and _label_norm(c["text"]) == want), None)
         if hit:
             p = rpc(sock, {"op": "press", "hwnd": hit["hwnd"]})
@@ -1240,6 +1379,28 @@ def main() -> int:
     p.add_argument("--drive", help="CD-Laufwerk (Standard wie bei eject)")
     p.set_defaults(fn=cmd_ripiso)
 
+    p = sub.add_parser("ini", help="Wert in INI/CONF lesen oder setzen (Sicherung .xpctl-bak), mehrere Dateien möglich")
+    p.add_argument("key")
+    p.add_argument("files", nargs="+")
+    p.add_argument("--section", "-s")
+    p.add_argument("--value", "-v", help="ohne: nur lesen")
+    p.set_defaults(fn=cmd_ini)
+
+    p = sub.add_parser("nv", help="globale NVIDIA-3D-Einstellung lesen/setzen (vsync app|on|off, triplebuffer on|off, prerender N)")
+    p.add_argument("setting", nargs="?", choices=["vsync", "triplebuffer", "prerender"])
+    p.add_argument("value", nargs="?")
+    p.set_defaults(fn=cmd_nv)
+
+    p = sub.add_parser("toc", help="Spuren der CD (Daten/Audio, Länge)")
+    p.add_argument("--drive", default="E:")
+    p.set_defaults(fn=cmd_toc)
+
+    p = sub.add_parser("ripcd", help="CD mit Audiospuren als CUE + ISO/BIN je Spur (Mixed-Mode, DOSBox)")
+    p.add_argument("folder", help=r"Zielordner, z.B. C:\Rips\Bleifuss")
+    p.add_argument("name", help="Dateiname ohne Endung")
+    p.add_argument("--drive", default="E:")
+    p.set_defaults(fn=cmd_ripcd)
+
     p = sub.add_parser("pesec", help="PE-Sektionen einer Exe (stxt774/stxt371 = SafeDisc 2+, .securom)")
     p.add_argument("paths", nargs="+")
     p.set_defaults(fn=cmd_pesec)
@@ -1309,6 +1470,17 @@ def main() -> int:
     p = sub.add_parser("ver", help="Version/Größe/Datum/md5 von Exe- und DLL-Dateien")
     p.add_argument("paths", nargs="+")
     p.set_defaults(fn=cmd_ver)
+
+    p = sub.add_parser("install", help="Installer still ausführen (Inno/NSIS/MSI erkannt), GOG-EULA automatisch, Log prüfen")
+    p.add_argument("setup", help=r"z.B. \\server\share\setup_x.exe")
+    p.add_argument("dir", help=r"Ziel, z.B. C:\Games\Spiel (muss leer sein, sonst --force)")
+    p.add_argument("--kind", default="auto", choices=["auto", "inno", "nsis", "msi"])
+    p.add_argument("--lang", default="german")
+    p.add_argument("--args", default="", help="zusätzliche Installer-Argumente")
+    p.add_argument("--force", action="store_true", help="auch in nicht leeren Zielordner")
+    p.add_argument("--timeout", type=float, default=1800)
+    p.add_argument("--detect", action="store_true", help="nur Installer-Typ anzeigen")
+    p.set_defaults(fn=cmd_install)
 
     p = sub.add_parser("uninstall", help="Programm deinstallieren (Uninstall-Eintrag), Dialoge danach per press")
     p.add_argument("name", help="Teil von Anzeigename oder Schlüssel")

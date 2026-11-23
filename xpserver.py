@@ -35,7 +35,7 @@ import threading
 import zlib
 import time
 
-VERSION = 9
+VERSION = 14
 RESTART_CODE = 42
 MAX_FRAME = 16 * 1024 * 1024
 CHUNK = 256 * 1024
@@ -1871,6 +1871,20 @@ def shell_refresh(path=None):
     ns.sh.SHChangeNotify(0x08000000, 0, None, None)   # SHCNE_ASSOCCHANGED: Icons neu laden
 
 
+def desktop_f5():
+    """Desktop wie mit F5 neu laden: geänderte Ordner-Icons (desktop.ini) zeigt Explorer sonst erst nach Abmelden."""
+    import ctypes
+    u = ctypes.windll.user32
+    u.FindWindowW.restype = u.FindWindowExW.restype = ctypes.c_void_p
+    u.FindWindowExW.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_wchar_p, ctypes.c_wchar_p]
+    u.PostMessageW.argtypes = [ctypes.c_void_p, ctypes.c_uint, ctypes.c_void_p, ctypes.c_void_p]
+    view = u.FindWindowExW(u.FindWindowW("Progman", None), None, "SHELLDLL_DefView", None)
+    lv = u.FindWindowExW(view, None, "SysListView32", None) if view else None
+    if lv:
+        u.PostMessageW(lv, 0x100, 0x74, None)   # WM_KEYDOWN VK_F5
+        u.PostMessageW(lv, 0x101, 0x74, None)
+
+
 def link_dest(name, folder):
     au, _ = desk_dirs()
     d = au if not folder or folder == "-" else os.path.join(au, folder)
@@ -1958,7 +1972,7 @@ def set_folder_icon(folder, loc):
     if os.path.exists(ini):
         ns.k.SetFileAttributesW(ini, 0x80)
         os.remove(ini)
-    with open(ini, "w", encoding="mbcs") as t:
+    with open(ini, "w", encoding="mbcs", newline="") as t:
         t.write("[.ShellClassInfo]\r\nIconFile=%s\r\nIconIndex=%d\r\nConfirmFileOp=0\r\n" % (f, idx))
     ns.k.SetFileAttributesW(ini, 0x2 | 0x4)          # versteckt + System
     a = ns.k.GetFileAttributesW(folder)
@@ -2038,6 +2052,7 @@ def op_desk(sock, req):
             if w:
                 msgs.append("%s: %s" % (g, w))
         msgs.append("%d verschoben" % moved)
+        desktop_f5()
     else:
         return {"ok": False, "error": "unbekannte desk-Aktion: %s" % act}
     shell_refresh(au)
@@ -2257,6 +2272,244 @@ def op_ripiso(sock, req):
     return {"ok": True, "label": label, "sectors": done, "md5": md5.hexdigest(),
             "seconds": int(time.time() - start), "padded": [padded[0], padded[-1], len(padded)] if padded else None,
             "target": target}
+
+
+def _cd_handle(f):
+    import msvcrt
+    return msvcrt.get_osfhandle(f.fileno())
+
+
+def _ioctl(h, code, inbuf, outsize):
+    import ctypes
+    from ctypes import wintypes
+    out = ctypes.create_string_buffer(outsize)
+    got = wintypes.DWORD(0)
+    ib = ctypes.create_string_buffer(inbuf, len(inbuf)) if inbuf else None
+    ok = ctypes.windll.kernel32.DeviceIoControl(wintypes.HANDLE(h), wintypes.DWORD(code), ib,
+                                                wintypes.DWORD(len(inbuf) if inbuf else 0), out,
+                                                wintypes.DWORD(outsize), ctypes.byref(got), None)
+    if not ok:
+        raise IOError("DeviceIoControl 0x%x Fehler %d" % (code, ctypes.windll.kernel32.GetLastError()))
+    return out.raw[:got.value]
+
+
+def read_toc(f):
+    """Inhaltsverzeichnis (IOCTL_CDROM_READ_TOC): Liste von Spuren mit Start-LBA, Länge, Daten/Audio."""
+    raw = _ioctl(_cd_handle(f), 0x24000, None, 804)
+    first, last = raw[2], raw[3]
+    entries = []
+    for i in range(last - first + 2):
+        d = raw[4 + 8 * i:12 + 8 * i]
+        m, sec, fr = d[5], d[6], d[7]
+        entries.append({"track": d[2], "data": bool(d[1] & 0x04), "lba": (m * 60 + sec) * 75 + fr - 150})
+    tracks = []
+    for a, b in zip(entries, entries[1:]):
+        tracks.append({"track": a["track"], "data": a["data"], "lba": a["lba"], "sectors": b["lba"] - a["lba"]})
+    return tracks
+
+
+def op_toc(sock, req):
+    drive = (req.get("drive") or "E:").rstrip("\\").rstrip(":")
+    with open("\\\\.\\%s:" % drive, "rb", buffering=0) as f:
+        return {"ok": True, "label": vol_label(drive + ":"), "tracks": read_toc(f)}
+
+
+def op_ripcd(sock, req):
+    """Ganze CD als CUE + je Spur eine Datei: Datenspur 2048-Byte-ISO, Audiospuren roh 2352 Byte (CDDA).
+    Für Mixed-Mode-CDs mit Musik (DOSBox imgmount liest das CUE). Unlesbares wird mit Nullen gefüllt und gemeldet."""
+    import hashlib as _h
+    drive = (req.get("drive") or "E:").rstrip("\\").rstrip(":")
+    folder, name = req["folder"], req["name"]
+    if not os.path.isdir(folder):
+        os.makedirs(folder)
+    start, cue, report = time.time(), ['REM xpctl ripcd'], []
+    with open("\\\\.\\%s:" % drive, "rb", buffering=0) as f:
+        h = _cd_handle(f)
+        tracks = read_toc(f)
+        for t in tracks:
+            n = t["track"]
+            md5, bad = _h.md5(), []
+            if t["data"]:
+                fn = "%s %02d.iso" % (name, n)
+                with open(os.path.join(folder, fn), "wb") as dst:
+                    pos = 0
+                    while pos < t["sectors"]:
+                        k = min(32, t["sectors"] - pos)
+                        try:
+                            f.seek((t["lba"] + pos) * 2048)
+                            data = f.read(k * 2048)
+                            if len(data) != k * 2048:
+                                raise IOError("kurz")
+                        except (IOError, OSError):
+                            data = b""
+                            for s_ in range(k):
+                                try:
+                                    f.seek((t["lba"] + pos + s_) * 2048)
+                                    one = f.read(2048)
+                                    if len(one) != 2048:
+                                        raise IOError("kurz")
+                                except (IOError, OSError):
+                                    one = b"\0" * 2048
+                                    bad.append(t["lba"] + pos + s_)
+                                data += one
+                        dst.write(data)
+                        md5.update(data)
+                        pos += k
+                cue += ['FILE "%s" BINARY' % fn, "  TRACK %02d MODE1/2048" % n, "    INDEX 01 00:00:00"]
+            else:
+                fn = "%s %02d.bin" % (name, n)
+                with open(os.path.join(folder, fn), "wb") as dst:
+                    pos = 0
+                    while pos < t["sectors"]:
+                        k = min(26, t["sectors"] - pos)
+                        try:
+                            data = _ioctl(h, 0x2403E, struct.pack("<qII", (t["lba"] + pos) * 2048, k, 2), k * 2352)
+                            if len(data) != k * 2352:
+                                raise IOError("kurz")
+                        except (IOError, OSError):
+                            data = b""
+                            for s_ in range(k):
+                                try:
+                                    one = _ioctl(h, 0x2403E, struct.pack("<qII", (t["lba"] + pos + s_) * 2048, 1, 2), 2352)
+                                except (IOError, OSError):
+                                    one = b"\0" * 2352
+                                    bad.append(t["lba"] + pos + s_)
+                                data += one
+                        dst.write(data)
+                        md5.update(data)
+                        pos += k
+                cue += ['FILE "%s" BINARY' % fn, "  TRACK %02d AUDIO" % n, "    INDEX 01 00:00:00"]
+            report.append({"track": n, "data": t["data"], "sectors": t["sectors"], "file": fn,
+                           "md5": md5.hexdigest(), "bad": len(bad), "bad_range": [bad[0], bad[-1]] if bad else None})
+    cuefile = os.path.join(folder, name + ".cue")
+    with open(cuefile, "w") as c:
+        c.write("\r\n".join(cue) + "\r\n")
+    return {"ok": True, "label": vol_label(drive + ":"), "cue": cuefile, "tracks": report,
+            "seconds": int(time.time() - start)}
+
+
+# ---------- NVIDIA-Treibereinstellungen (NVAPI DRS, globales Basisprofil) ----------
+
+NV_SETTINGS = {
+    "vsync": (0x00A879CF, {"app": 0x60925292, "off": 0x08416747, "on": 0x47814940}),
+    "triplebuffer": (0x20FDD1F9, {"off": 0, "on": 1}),
+    "prerender": (0x007BA09E, None),   # Max. vorgerenderte Frames, Zahl (0 = App)
+}
+
+
+def _nvapi():
+    import ctypes
+    dll = ctypes.CDLL("nvapi.dll")
+    q = dll.nvapi_QueryInterface
+    q.restype = ctypes.c_void_p
+    q.argtypes = [ctypes.c_uint]
+
+    def fn(iid, *argtypes):
+        ptr = q(iid)
+        if not ptr:
+            raise OSError("NVAPI-Funktion 0x%08X fehlt im Treiber" % iid)
+        return ctypes.CFUNCTYPE(ctypes.c_int, *argtypes)(ptr)
+    if fn(0x0150E828)() != 0:   # NvAPI_Initialize
+        raise OSError("NvAPI_Initialize fehlgeschlagen")
+    return fn
+
+
+def op_nv(sock, req):
+    """Globale 3D-Einstellung lesen/setzen (wie Systemsteuerung > 3D-Einstellungen > Globale Einstellungen)."""
+    import ctypes
+    from ctypes import c_void_p, c_uint, byref, POINTER
+
+    class Setting(ctypes.Structure):
+        _fields_ = [("version", c_uint), ("name", ctypes.c_wchar * 2048), ("id", c_uint), ("type", c_uint),
+                    ("location", c_uint), ("isCurrentPredefined", c_uint), ("isPredefinedValid", c_uint),
+                    ("predefined", c_uint), ("_p", ctypes.c_byte * 4096),
+                    ("current", c_uint), ("_c", ctypes.c_byte * 4096)]
+    fn = _nvapi()
+    create = fn(0x0694D52E, POINTER(c_void_p))
+    load = fn(0x375DBD6B, c_void_p)
+    base = fn(0xDA8466A0, c_void_p, POINTER(c_void_p))
+    get = fn(0x73BF8338, c_void_p, c_void_p, c_uint, POINTER(Setting))
+    setf = fn(0x577DD202, c_void_p, c_void_p, POINTER(Setting))
+    save = fn(0xFCBC7E14, c_void_p)
+    destroy = fn(0xDAD9CFF8, c_void_p)
+    names = req.get("names") or sorted(NV_SETTINGS)
+    sess, prof = c_void_p(), c_void_p()
+    if create(byref(sess)) != 0:
+        return {"ok": False, "error": "NvAPI_DRS_CreateSession fehlgeschlagen"}
+    try:
+        for step, r in (("LoadSettings", load(sess)), ("GetBaseProfile", base(sess, byref(prof)))):
+            if r != 0:
+                return {"ok": False, "error": "NvAPI_DRS_%s: Fehler %d" % (step, r)}
+        if req.get("set"):
+            name, val = req["set"]
+            sid, vals = NV_SETTINGS[name]
+            v = vals[val] if vals else int(val)
+            st = Setting()
+            st.version = ctypes.sizeof(Setting) | (1 << 16)
+            st.id, st.type, st.current = sid, 0, v
+            r = setf(sess, prof, byref(st))
+            if r != 0:
+                return {"ok": False, "error": "SetSetting %s: Fehler %d" % (name, r)}
+            r = save(sess)
+            if r != 0:
+                return {"ok": False, "error": "SaveSettings: Fehler %d" % r}
+            names = [name]
+        out = {}
+        for name in names:
+            sid, vals = NV_SETTINGS[name]
+            st = Setting()
+            st.version = ctypes.sizeof(Setting) | (1 << 16)
+            r = get(sess, prof, sid, byref(st))
+            if r != 0:
+                out[name] = "Treiber-Standard (nicht gesetzt)" if r == -160 else "Fehler %d" % r
+                continue
+            rev = dict((b, a) for a, b in vals.items()) if vals else {}
+            out[name] = rev.get(st.current, "0x%08X" % st.current) if vals else st.current
+        return {"ok": True, "settings": out}
+    finally:
+        destroy(sess)
+
+
+def op_ini(sock, req):
+    """Einen Wert in einer INI/CONF-Datei lesen oder setzen (Rest unverändert, Zeilenenden bleiben).
+    Vor der ersten Änderung Sicherung als <datei>.xpctl-bak."""
+    path, sec, key = req["path"], (req.get("section") or "").lower(), req["key"].lower()
+    with open(path, "rb") as f:
+        lines = f.read().decode("latin-1").splitlines(True)
+    cur, hit, sec_end = "", None, None
+    for i, l in enumerate(lines):
+        t = l.strip()
+        if t.startswith("[") and t.endswith("]"):
+            if sec and cur == sec and sec_end is None:
+                sec_end = i
+            cur = t[1:-1].strip().lower()
+            continue
+        if (not sec or cur == sec) and "=" in t and not t.startswith(("#", ";")):
+            if t.split("=", 1)[0].strip().lower() == key:
+                hit = i
+                break
+    old = lines[hit].split("=", 1)[1].strip() if hit is not None else None
+    if req.get("value") is None:
+        return {"ok": True, "old": old, "changed": False}
+    if old == req["value"]:
+        return {"ok": True, "old": old, "changed": False}
+    nl = "\r\n" if any(l.endswith("\r\n") for l in lines) else "\n"
+    new = "%s=%s%s" % (req["key"], req["value"], nl)
+    if hit is not None:
+        lines[hit] = new
+    elif sec:
+        idx = [i for i, l in enumerate(lines) if l.strip().lower() == "[%s]" % sec]
+        if not idx:
+            return {"ok": False, "error": "Abschnitt [%s] fehlt in %s" % (req["section"], path)}
+        lines.insert(idx[0] + 1, new)
+    else:
+        lines.append(new)
+    bak = path + ".xpctl-bak"
+    if not os.path.exists(bak):
+        shutil.copy2(path, bak)
+    with open(path, "wb") as f:
+        f.write("".join(lines).encode("latin-1"))
+    return {"ok": True, "old": old, "changed": True, "backup": bak}
 
 
 def op_pesec(sock, req):
@@ -2780,7 +3033,11 @@ PROTECT_SECTIONS = {"stxt774": "SafeDisc 2+", "stxt371": "SafeDisc 2+", ".securo
 def pe_sections(path):
     with open(path, "rb") as f:
         d = f.read(4096)
+    if d[:2] != b"MZ" or len(d) < 0x40:
+        return ["(keine Exe)"]
     o = struct.unpack_from("<I", d, 0x3C)[0]
+    if o + 24 > len(d) or d[o:o + 4] != b"PE\0\0":
+        return ["(DOS-Exe)"]
     n = struct.unpack_from("<H", d, o + 6)[0]
     so = o + 24 + struct.unpack_from("<H", d, o + 20)[0]
     return [d[so + 40 * i:so + 40 * i + 8].rstrip(b"\0").decode("latin1") for i in range(n)]
@@ -2831,6 +3088,74 @@ def op_setupapi(sock, req):
     if g:
         blocks = [b for b in blocks if g in b.lower()]
     return {"ok": True, "blocks": blocks[-(req.get("last") or 5):]}
+
+
+def installer_kind(path):
+    low = path.lower()
+    if low.endswith(".msi"):
+        return "msi"
+    with open(path, "rb") as f:
+        head = f.read(4 * 1024 * 1024)
+    for marker, kind in ((b"Inno Setup", "inno"), (b"I\0n\0n\0o\0 \0S\0e\0t\0u\0p", "inno"),
+                         (b"Nullsoft", "nsis"), (b"NullsoftInst", "nsis"), (b"InstallShield", "installshield")):
+        if marker in head:
+            return kind
+    return "unbekannt"
+
+
+def op_install(sock, req):
+    """Installer still ausführen (Inno, NSIS, MSI), warten, Ergebnis aus Log/Zielordner.
+    status: ok | eula (GOG-Inno bricht still an der EULA-Checkbox ab, dann interaktiv) | fehler | unbekannt."""
+    setup, target = req["setup"], req["dir"].rstrip("\\")
+    if not req.get("detect_only") and os.path.exists(target) and os.listdir(target) and not req.get("force"):
+        return {"ok": False, "error": "Zielordner existiert und ist nicht leer: %s (fremde Dateien? sonst --force)" % target}
+    if not os.path.exists(setup):
+        return {"ok": False, "error": "Installer nicht gefunden: %s" % setup}
+    kind = req.get("kind") or "auto"
+    if kind == "auto":
+        kind = installer_kind(setup)
+    if req.get("detect_only"):
+        return {"ok": True, "kind": kind}
+    log = req.get("log") or "C:\\temp\\install-%s.log" % re.sub(r"[^A-Za-z0-9]+", "_", os.path.basename(target))
+    if not os.path.isdir(os.path.dirname(log)):
+        os.makedirs(os.path.dirname(log))
+    if os.path.exists(log):
+        os.remove(log)
+    extra = req.get("args") or ""
+    if kind == "inno":
+        cmd = '"%s" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /LANG=%s "/DIR=%s" "/LOG=%s" %s' % (
+            setup, req.get("lang") or "german", target, log, extra)
+    elif kind == "nsis":
+        cmd = '"%s" /S %s /D=%s' % (setup, extra, target)
+    elif kind == "msi":
+        cmd = 'msiexec /i "%s" /qb /norestart TARGETDIR="%s" INSTALLDIR="%s" /l*v "%s" %s' % (
+            setup, target, target, log, extra)
+    else:
+        return {"ok": True, "status": "unbekannt", "kind": kind,
+                "hint": "Installer-Typ nicht erkannt: interaktiv per run --detach + ui/press"}
+    start = time.time()
+    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        code = p.wait(timeout=float(req.get("timeout", 1800)))
+    except subprocess.TimeoutExpired:
+        return {"ok": True, "status": "fehler", "kind": kind, "cmd": cmd, "detail": "Zeitüberschreitung, Installer läuft noch"}
+    text = ""
+    if os.path.exists(log):
+        with open(log, "rb") as f:
+            text = f.read().decode("latin-1", "replace")
+    files = sum(len(fs) for _, _, fs in os.walk(target)) if os.path.isdir(target) else 0
+    if kind == "inno":
+        if "Installation process succeeded" in text:
+            status = "ok"
+        elif "Failed to proceed to next wizard page" in text:
+            status = "eula"
+        else:
+            status = "fehler"
+    else:
+        status = "ok" if code == 0 and files else "fehler"
+    tail = [l for l in text.splitlines() if l.strip()][-6:]
+    return {"ok": True, "status": status, "kind": kind, "exit": code, "files": files, "log": log,
+            "cmd": cmd, "seconds": int(time.time() - start), "tail": tail}
 
 
 def op_uninstall(sock, req):
@@ -2890,7 +3215,8 @@ OPS = {"ping": op_ping, "run": op_run, "put": op_put, "get": op_get, "update": o
        "ripiso": op_ripiso, "pesec": op_pesec, "driver": op_driver,
        "games": op_games, "ls": op_ls, "cat": op_cat, "ps": op_ps, "kill": op_kill,
        "hash": op_hash, "copy": op_copy, "rm": op_rm, "disc": op_disc, "setupapi": op_setupapi,
-       "uninstall": op_uninstall, "ver": op_ver}
+       "uninstall": op_uninstall, "ver": op_ver, "toc": op_toc, "ripcd": op_ripcd,
+       "nv": op_nv, "ini": op_ini, "install": op_install}
 
 
 def describe(req):

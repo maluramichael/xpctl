@@ -151,6 +151,18 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
 
 `--gog-ssh` ergänzt die GOG-Version aus den Setup-Dateinamen auf einem SSH-Host (`XPCTL_GOG_SSH`, `XPCTL_GOG_DIR`).
 
+### Installieren und Einstellen
+
+    ./xpctl.py install '\\server\share\setup_spiel.exe' 'C:\Games\Spiel'   # Inno/NSIS/MSI still, Log geprüft
+    ./xpctl.py install --detect setup.exe x              # nur Installer-Typ
+    ./xpctl.py ini output 'C:\Games\X\dosbox.conf' -s sdl -v opengl   # INI/CONF-Wert setzen, Sicherung .xpctl-bak
+    ./xpctl.py nv                                         # globale NVIDIA-3D-Einstellungen (NVAPI)
+    ./xpctl.py nv vsync on                                # vsync app|on|off, triplebuffer on|off, prerender N
+    ./xpctl.py toc                                        # Spuren der CD (Daten/Audio)
+    ./xpctl.py ripcd 'C:\Rips\Spiel' 'Spiel'            # CD mit Musikspuren als CUE + ISO + BIN je Spur
+
+`install` verweigert einen nicht leeren Zielordner (ohne `--force`), weil ein Deinstaller den ganzen Ordner löschen kann. Neuere GOG-Installer brechen still an der EULA-Checkbox ab: `install` startet sie dann interaktiv, hakt die Checkbox an und klickt sich bis zum Ende durch. `desk group` lädt den Desktop danach neu, damit geänderte Ordner-Icons sofort erscheinen.
+
 ## Update des Servers
 
 `xpctl.py update` schickt das lokale `xpserver.py` an den XP-Rechner. Der Server prüft Prüfsumme und Syntax, legt die alte Version als `xpserver.py.bak` ab und beendet sich mit Code 42, `xpserver.bat` startet ihn neu. Scheitert der Start, spielt die `.bat` die `.bak` zurück. Auch nach einem Absturz startet die `.bat` den Server neu (höchstens dreimal hintereinander, mit Rollback). Die `.bat` selbst wird nicht ferngeupdatet. `update` geht nur, wenn der Server über `xpserver.bat` gestartet wurde.
