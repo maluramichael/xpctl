@@ -110,6 +110,34 @@ static J Hallo(Conn c, Req r)
 
 Regeln für .NET 3.5 und für das Antwortformat stehen in `PORTING.md`.
 
+### Temperaturquellen
+
+`temps` fragt alle Quellen aus `Ops/Temps.cs` ab. Eingebaut sind:
+
+| Quelle | Liefert | Braucht |
+|---|---|---|
+| `acpi` | Thermalzone des Mainboards mit Drossel- und Abschaltgrenze | ACPI-BIOS mit Thermalzone |
+| `smart` | Temperatur jeder Festplatte und SSD (SMART 194/190) | IDE/SATA-Laufwerke, Adminrechte |
+| `nvidia` | GPU-Temperatur | NVIDIA-Treiber mit `nvapi.dll` (ab etwa 2007) |
+| `hwinfo` | alle Temperaturen, die HWiNFO kennt (CPU-Kerne, Chipsatz, GPU, Laufwerke) mit Namen | laufendes HWiNFO mit "Shared Memory Support" |
+| `speedfan` | Temperaturen von SpeedFan, nur nummeriert | laufendes SpeedFan |
+
+Fehlt eine Quelle, steht der Grund unter `sources` in der Antwort und die anderen liefern trotzdem. Eine neue Quelle ist eine Klasse:
+
+```csharp
+public class MeineQuelle : TempSource
+{
+    public override string Name { get { return "meine"; } }
+    public override void Read(List<J> into)
+    {
+        // nicht vorhanden: throw new Unavailable("Grund");
+        into.Add(Temps.Sensor(Name, "Sensorname", "cpu", 42.0));
+    }
+}
+```
+
+plus ein Eintrag in `Temps.Sources`. Im Client die Liste `TEMP_SOURCES` ergänzen (nur für die Hilfe).
+
 ## Tests
 
 `tests/parity.py` schickt dieselben Anfragen an zwei Server und vergleicht die JSON-Antworten feldgenau. So wurde der Port gegen den alten Python-Server geprüft (alter Server auf 5050, neuer auf einem Testport):

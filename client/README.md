@@ -53,6 +53,8 @@ Das Passwort ist dasselbe, das beim ersten Start von `xpserver.exe` auf dem XP-R
     ./xpctl.py updates [--grep .NET] [--json]  # Hotfixes: KB, Datum, Kategorie, SP-Stand, POSReady-Hack
     ./xpctl.py programs [--all] [--grep TEXT]
     ./xpctl.py sysinfo                         # Windows, CPU, RAM, Laufwerke, IE, DirectX, .NET
+    ./xpctl.py temps                           # Temperaturen: Mainboard (ACPI), Laufwerke (SMART), NVIDIA-GPU, HWiNFO, SpeedFan
+    ./xpctl.py temps --source hwinfo --json    # nur eine Quelle, als JSON
     ./xpctl.py reg 'HKCU\Control Panel\Mouse' [--recurse 2] [--values] [--json]
     ./xpctl.py settings [--only region,users] [--paths]
     ./xpctl.py setupapi [-g TEXT] [--last N]   # letzte Treiberinstallationen

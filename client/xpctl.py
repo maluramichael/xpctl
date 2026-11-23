@@ -15,6 +15,7 @@
   xpctl.py updates [--grep TEXT] [--json]      Hotfixes/Updates, SP-Stand, POSReady
   xpctl.py programs [--all] [--grep TEXT] [--json]   installierte Programme
   xpctl.py sysinfo [--json]                    Windows, CPU, RAM, Laufwerke, IE, DirectX, .NET
+  xpctl.py temps [--source acpi,smart,nvidia,hwinfo,speedfan] [--json]   Temperaturen (xpserver.exe)
   xpctl.py reg KEY [--values] [--recurse N] [--json]   Registry-Schlüssel lesen (HKLM/HKCU/HKU/HKCR)
   xpctl.py settings [--only abschnitt,...] [--paths] [--json]   kuratierte Einstellungen
   xpctl.py productkey --out DATEI              XP-Produktschlüssel nur in Datei (chmod 600)
@@ -562,6 +563,43 @@ def cmd_programs(sock, args):
 
 def _mb(n):
     return f"{n / 1024:.1f} GB" if n >= 1024 else f"{n} MB"
+
+
+TEMP_SOURCES = ["acpi", "smart", "nvidia", "hwinfo", "speedfan"]
+
+
+def cmd_temps(sock, args):
+    """Temperaturen aller Quellen, die der Rechner hergibt. Quellen ohne Sensor erscheinen als Hinweis."""
+    req = {"op": "temps"}
+    if args.source:
+        req["sources"] = [s.strip() for x in args.source for s in x.split(",") if s.strip()]
+    r = rpc(sock, req)
+    if r is None:
+        return 1
+    if args.json:
+        print(json.dumps(r, ensure_ascii=False, indent=1))
+        return 0
+    sens = r["sensors"]
+    if sens:
+        wn = max(len(s["name"]) for s in sens)
+        ws = max(len(s["source"]) for s in sens)
+        for s in sens:
+            c, warn, crit = s["celsius"], s.get("warn"), s.get("crit")
+            lim = []
+            if warn is not None:
+                lim.append(f"drosselt ab {warn:g}")
+            if crit is not None:
+                lim.append(f"kritisch {crit:g}")
+            mark = "  KRITISCH" if crit is not None and c >= crit else "  warm" if warn is not None and c >= warn else ""
+            extra = f"  ({', '.join(lim)})" if lim else ""
+            print(f"{s['source']:<{ws}}  {s['name']:<{wn}}  {c:5.1f} °C{mark}{extra}")
+    else:
+        print("keine Temperatur gefunden")
+    for st in r["sources"]:
+        msg = st.get("note") or st.get("error")
+        if msg:
+            print(f"  {st['name']}: {msg}")
+    return 0
 
 
 def cmd_sysinfo(sock, args):
@@ -1693,6 +1731,12 @@ def main() -> int:
     p = sub.add_parser("sysinfo", help="Windows, CPU, RAM, Laufwerke, IE, DirectX, .NET")
     p.add_argument("--json", action="store_true")
     p.set_defaults(fn=cmd_sysinfo)
+
+    p = sub.add_parser("temps", help="Temperaturen: ACPI, SMART, NVIDIA, HWiNFO, SpeedFan (xpserver.exe)")
+    p.add_argument("--source", action="append", metavar="QUELLE",
+                   help="nur diese Quelle(n), kommagetrennt oder mehrfach: " + ", ".join(TEMP_SOURCES))
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(fn=cmd_temps)
 
     p = sub.add_parser("reg", help="Registry-Schlüssel lesen (nur lesen)")
     p.add_argument("key", help=r"z.B. HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")
