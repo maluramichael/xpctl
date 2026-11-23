@@ -1,5 +1,10 @@
 # <img src="docs/img/symbol.png" width="40" align="top"> xpctl
 
+<!-- links:start -->
+[![Support me on Ko-fi](https://malura.de/assets/badge/kofi.svg)](https://malura.de/go/kofi?ref=xpctl)
+[![Check out my page](https://malura.de/assets/badge/malura.svg)](https://malura.de/go/site?ref=xpctl)
+<!-- links:end -->
+
 Remote control for Windows XP machines from your terminal. Built for retro PCs: start programs and installers, transfer files, read and operate windows, read the registry and system settings, arrange desktop shortcuts, mount CD images, back up CDs, install drivers, identify game versions and edit save games.
 
 ![xpserver live window](docs/img/live-fenster.png)
