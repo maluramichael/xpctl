@@ -1,0 +1,95 @@
+# ls
+{"op": "ls", "path": "C:\\xpctl", "_ignore": ["entries.*.size", "entries.*.mtime", "total"]}
+{"op": "ls", "path": "C:\\xpctl\\", "_ignore": ["entries.*.size", "entries.*.mtime", "total"]}
+{"op": "ls", "path": "C:\\xpctl\\xpctl.key"}
+{"op": "ls", "path": "C:\\gibtsnicht"}
+{"op": "ls", "path": "C:\\xpctl-net\\files\\t", "recurse": -1}
+{"op": "ls", "path": "C:\\xpctl-net\\files\\t", "recurse": 0}
+{"op": "ls", "path": "C:\\xpctl-net\\files\\t", "recurse": 1, "patterns": ["*.TXT"]}
+{"op": "ls", "path": "C:\\xpctl-net\\files\\t", "recurse": -1, "patterns": ["t?*.txt", "[cr]*"], "files_only": true}
+{"op": "ls", "path": "C:\\xpctl-net\\files\\t", "recurse": -1, "limit": 3}
+{"op": "ls", "path": "C:\\xpctl-net\\files\\t/", "recurse": 1}
+{"op": "ls", "path": "C:\\Games", "recurse": 1, "limit": 600}
+{"op": "ls", "path": "C:\\Games", "recurse": 0}
+{"op": "ls", "path": "C:\\Games", "recurse": 1, "patterns": ["*.exe"], "files_only": true}
+{"op": "ls", "path": "C:\\WINDOWS\\system32\\drivers", "patterns": ["*.sys"], "limit": 50}
+{"op": "ls", "path": "C:\\"}
+# cat
+{"op": "cat", "path": "C:\\xpctl\\xpserver.bat"}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\Täst Ö.txt"}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\Täst Ö.txt", "grep": "zeile"}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\Täst Ö.txt", "grep": "/^z.*(eins|drei)$/"}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\Täst Ö.txt", "head": 2}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\Täst Ö.txt", "tail": 2}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\Täst Ö.txt", "tail": 3, "head": 2}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\cp1252.txt"}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\raw.bin"}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t\\rnd.dat", "head": 3}
+{"op": "cat", "path": "C:\\gibtsnicht.txt"}
+{"op": "cat", "path": "C:\\gibtsnicht\\x.txt"}
+{"op": "cat", "path": "C:\\xpctl-net\\files\\t"}
+{"op": "cat", "path": "C:\\WINDOWS\\setupapi.log", "head": 5}
+{"op": "cat", "path": "C:\\WINDOWS\\setupapi.log", "tail": 5, "grep": "driver"}
+{"op": "cat"}
+# hash
+{"op": "hash", "paths": ["C:\\xpctl\\xpctl.key", "C:\\xpctl-net\\files\\t\\rnd.dat", "C:\\xpctl-net\\files\\t\\Täst Ö.txt"]}
+{"op": "hash", "paths": ["C:\\xpctl-net\\files\\t\\rnd.dat"], "algo": "sha256"}
+{"op": "hash", "paths": ["C:\\xpctl-net\\files\\t\\rnd.dat"], "algo": "sha1"}
+{"op": "hash", "paths": ["C:\\xpctl-net\\files\\t\\rnd.dat"], "algo": "sha512"}
+{"op": "hash", "paths": ["C:\\xpctl-net\\files\\t\\rnd.dat"], "algo": "gibtsnicht"}
+{"op": "hash", "paths": ["C:\\gibtsnicht.bin", "C:\\xpctl-net\\files\\t", "C:\\gibtsnicht\\x.bin"]}
+{"op": "hash"}
+# ps / kill (Fehlerpfade)
+{"op": "ps", "filter": "smss"}
+{"op": "ps", "filter": "smss", "cmdline": true}
+{"op": "ps", "filter": "explorer", "cmdline": true, "_ignore": ["procs.*.mem_kb"]}
+{"op": "ps", "filter": "gibtsnicht.exe"}
+{"op": "kill", "targets": ["gibtsnicht.exe"]}
+{"op": "kill", "targets": ["99999999"]}
+{"op": "kill", "targets": ["smss.exe"]}
+{"op": "kill", "targets": ["Explorer.EXE", "svchost.exe"]}
+{"op": "kill"}
+# copy (beide Server schreiben dasselbe Ziel)
+{"op": "copy", "src": "C:\\xpctl-net\\files\\t\\Täst Ö.txt", "dst": "C:\\xpctl-net\\files\\c1\\", "verify": true}
+{"op": "copy", "src": "C:\\xpctl-net\\files\\t\\sub", "dst": "C:\\xpctl-net\\files\\c2", "_ignore": ["dst"]}
+{"op": "copy", "src": "C:\\xpctl-net\\files\\t", "dst": "C:\\xpctl-net\\files\\c3\\", "verify": true}
+{"op": "copy", "src": "C:\\xpctl-net\\files\\t\\rnd.dat", "dst": "C:\\xpctl-net\\files\\c4\\neu\\x.dat"}
+{"op": "copy", "src": "C:\\xpctl-net\\files\\gibtsnicht", "dst": "C:\\xpctl-net\\files\\c5\\"}
+{"op": "copy", "src": "C:\\xpctl-net\\files\\t\\rnd.dat", "dst": "C:\\xpctl-net\\files\\t\\rnd.dat"}
+{"op": "ls", "path": "C:\\xpctl-net\\files", "recurse": -1, "patterns": ["c?*", "*.dat", "*.txt"], "_ignore": ["entries.*.mtime"]}
+# rm (Schutz, Fehler)
+{"op": "rm", "paths": ["C:\\xpctl\\xpctl.key"]}
+{"op": "rm", "paths": ["C:\\xpctl-net\\files\\t", "C:\\WINDOWS\\notepad.exe"]}
+{"op": "rm", "paths": ["C:\\xpctl-net\\files\\gibtsnicht.txt"], "force": true}
+{"op": "rm", "paths": ["C:\\xpctl-net\\files\\gibtsnicht\\x.txt"], "force": true}
+{"op": "rm", "paths": ["C:\\xpctl-net\\files\\t"], "force": true}
+{"op": "rm"}
+# disc (nur lesen)
+{"op": "disc"}
+{"op": "disc", "drive": "Z:"}
+# setupapi
+{"op": "setupapi", "last": 2}
+{"op": "setupapi", "grep": "nvidia", "last": 1}
+{"op": "setupapi", "grep": "gibtsnicht-xyz"}
+# install / uninstall (nur Fehlerpfade und Erkennung)
+{"op": "install", "setup": "C:\\gibtsnicht.exe", "dir": "C:\\xpctl-net\\files\\inst"}
+{"op": "install", "setup": "C:\\xpctl\\xpserver.bat", "dir": "C:\\xpctl-net\\files\\inst", "detect_only": true}
+{"op": "install", "setup": "C:\\xpctl\\xpserver.bat", "dir": "C:\\xpctl-net\\files\\t"}
+{"op": "install", "setup": "C:\\xpctl-net\\files\\setup.msi", "dir": "C:\\xpctl-net\\files\\inst", "detect_only": true}
+{"op": "install", "setup": "C:\\xpctl-net\\files\\t\\rnd.dat", "dir": "C:\\xpctl-net\\files\\t", "force": true, "detect_only": true}
+{"op": "uninstall", "name": "gibtsnicht-xyz"}
+{"op": "uninstall", "name": "microsoft"}
+{"op": "uninstall", "name": "gibtsnicht-xyz", "run": true}
+{"op": "uninstall", "name": "microsoft", "run": true}
+{"op": "uninstall"}
+{"op": "install", "setup": "X:\\by-year\\2001\\openvpn-1.6.0-install.exe", "dir": "C:\\xpctl-net\\files\\nix", "detect_only": true}
+{"op": "install", "setup": "X:\\by-year\\2001\\vlc-0.2.92-win32-installer.exe", "dir": "C:\\xpctl-net\\files\\nix", "detect_only": true}
+{"op": "install", "setup": "X:\\by-year\\2005\\reaper090-install.exe", "dir": "C:\\xpctl-net\\files\\nix", "detect_only": true}
+{"op": "install", "setup": "X:\\by-year\\2004\\PaintDotNet.msi", "dir": "C:\\xpctl-net\\files\\nix", "detect_only": true}
+# disc auf verschiedenen Laufwerken, ps mit Befehlszeilen, ls auf Netzlaufwerken
+{"op": "disc", "drive": "G:"}
+{"op": "disc", "drive": "D:"}
+{"op": "disc", "drive": "X:"}
+{"op": "ps", "filter": "svchost", "cmdline": true, "_ignore": ["procs.*.mem_kb"]}
+{"op": "ls", "path": "G:\\", "recurse": -1, "limit": 300}
+{"op": "ls", "path": "Y:\\", "recurse": 1, "limit": 300}

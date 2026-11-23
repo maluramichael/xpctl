@@ -1,0 +1,43 @@
+# shell: lesende Fälle (Desktop wird nicht verändert)
+{"op": "lnk", "action": "show", "names": ["Age of Empires II"]}
+{"op": "lnk", "action": "show", "names": ["3DMark03", "caesar iv", "Battle Realms"]}
+{"op": "lnk", "action": "show", "names": ["Caesar"]}
+{"op": "lnk", "action": "show", "names": ["Anno"], "_ignore": ["error"]}
+{"op": "lnk", "action": "show", "names": ["Gibtsnicht"]}
+{"op": "lnk", "action": "show", "names": ["C:\\xpctl-net\\shell\\gibtsnicht.lnk"]}
+{"op": "lnk", "action": "show", "names": []}
+{"op": "lnk", "action": "show"}
+{"op": "lnk", "action": "gibtsnicht", "name": "x"}
+{"op": "lnk", "action": "gibtsnicht"}
+{"op": "lnk", "action": "icon", "name": "Gibtsnicht", "icon": "x,0"}
+{"op": "lnk", "action": "style", "name": "Gibtsnicht", "show": 3}
+{"op": "desk", "action": "list"}
+{"op": "desk", "action": "list", "filter": "anno"}
+{"op": "desk", "action": "list", "filter": "ZZZ"}
+{"op": "desk", "action": "gibtsnicht"}
+{"op": "desk", "action": "move", "name": "Gibtsnicht", "folder": "Spiele"}
+{"op": "desk", "action": "foldericon", "folder": "C:\\xpctl-net\\shell\\gibtsnicht", "icon": "C:\\WINDOWS\\system32\\shell32.dll,5"}
+{"op": "deskpos", "action": "list"}
+{"op": "deskpos"}
+{"op": "deskpos", "action": "gibtsnicht"}
+{"op": "deskpos", "action": "move", "name": "Gibtsnicht", "x": 0, "y": 0}
+{"op": "deskpos", "action": "grid", "name": "Gibtsnicht", "col": 1, "row": 1}
+{"op": "deskpos", "action": "row", "row": 1, "names": ["Gibtsnicht"]}
+{"op": "ver", "paths": ["C:\\WINDOWS\\system32\\notepad.exe", "C:\\WINDOWS\\system32\\kernel32.dll", "C:\\gibtsnicht.exe", "C:\\xpctl-net\\shell", "C:\\xpctl\\xpctl.key"]}
+{"op": "ver", "paths": []}
+{"op": "ver"}
+{"op": "games", "filter": "age of empires"}
+{"op": "games", "filter": "anno"}
+{"op": "games", "filter": "caesar"}
+{"op": "games", "filter": "bf2"}
+{"op": "games", "filter": "zzz"}
+{"op": "games"}
+# schreibende Fälle, nur im eigenen Ordner (vorher: mkdir C:\xpctl-net\shell\w, nachher: rd /s /q C:\xpctl-net\shell\w);
+# idempotent, also A dann B auf derselben Datei. Weitere Abläufe (launcher, desk move/foldericon) liefen als Skript mit Zustandsreset.
+{"op": "lnk", "action": "make", "name": "C:\\xpctl-net\\shell\\w\\t1", "target": "C:\\WINDOWS\\system32\\notepad.exe", "args": "a b", "icon": "C:\\WINDOWS\\system32\\shell32.dll,5"}
+{"op": "lnk", "action": "show", "names": ["C:\\xpctl-net\\shell\\w\\t1.lnk"]}
+{"op": "lnk", "action": "icon", "name": "C:\\xpctl-net\\shell\\w\\t1.lnk", "icon": "C:\\WINDOWS\\system32\\shell32.dll,12"}
+{"op": "lnk", "action": "style", "name": "C:\\xpctl-net\\shell\\w\\t1.lnk", "show": 3}
+{"op": "lnk", "action": "make", "name": "C:\\xpctl-net\\shell\\w\\t2", "target": "C:\\Games\\x\\y.exe", "show": 7, "dir": "C:\\Games"}
+{"op": "lnk", "action": "make", "name": "C:\\xpctl-net\\shell\\w\\t4", "args": "x"}
+{"op": "deskpos", "action": "move", "name": "Action", "x": 321, "y": 914}

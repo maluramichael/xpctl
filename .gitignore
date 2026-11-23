@@ -5,3 +5,6 @@ __pycache__/
 *.part
 xpserver.json
 desktop-gruppen.txt
+server/bin/
+server/obj/
+server/dist/

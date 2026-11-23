@@ -1,0 +1,11 @@
+# Grund-Ops
+{"op": "ping"}
+{"op": "run", "cmd": "echo hallo & ver"}
+{"op": "run", "cmd": "dir C:\\xpctl\\xpctl.key"}
+{"op": "run", "cmd": "exit 3"}
+{"op": "run", "cmd": "echo ÄÖÜ ß"}
+{"op": "run", "cmd": "ping -n 5 127.0.0.1", "timeout": 1, "_ignore": ["stdout"]}
+{"op": "run", "cmd": "type C:\\gibtsnicht.txt"}
+{"op": "get", "path": "C:\\xpctl\\xpctl.key"}
+{"op": "get", "path": "C:\\gibtsnicht.txt"}
+{"op": "gibtsnicht"}

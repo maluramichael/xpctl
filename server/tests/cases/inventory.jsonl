@@ -1,0 +1,46 @@
+# Inventar (nur lesend)
+{"op": "updates"}
+{"op": "programs"}
+{"op": "sysinfo", "_ignore": ["ram.free_mb", "ram.load_pct", "drives.*.free_mb"]}
+{"op": "reg", "key": "HKLM"}
+{"op": "reg", "key": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"}
+{"op": "reg", "key": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "recurse": 1, "values": true, "limit": 50}
+{"op": "reg", "key": "hklm/software/microsoft/windows/currentversion/explorer", "recurse": 2, "values": true}
+{"op": "reg", "key": "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager", "values": true}
+{"op": "reg", "key": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Memory Management", "recurse": 3, "values": true, "limit": 5}
+{"op": "reg", "key": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage"}
+{"op": "reg", "key": "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters", "recurse": 1, "values": true}
+{"op": "reg", "key": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation"}
+{"op": "reg", "key": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Lsa", "values": true}
+{"op": "reg", "key": "HKLM\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor", "recurse": 2, "values": true}
+{"op": "reg", "key": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Setup", "values": true}
+{"op": "reg", "key": "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall", "recurse": 1, "values": true, "limit": 40}
+{"op": "reg", "key": "HKCU\\Control Panel\\Desktop", "values": true}
+{"op": "reg", "key": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced", "values": true}
+{"op": "reg", "key": "HKCU\\Environment", "values": true}
+{"op": "reg", "key": "HKCU\\Keyboard Layout", "recurse": 1, "values": true}
+{"op": "reg", "key": "HKU"}
+{"op": "reg", "key": "HKU\\.DEFAULT\\Control Panel\\Desktop", "values": true}
+{"op": "reg", "key": "HKCR\\.txt", "recurse": 1, "values": true}
+{"op": "reg", "key": "HKCR\\CLSID\\{20D04FE0-3AEA-1069-A2D8-08002B30309D}", "recurse": 2, "values": true}
+{"op": "reg", "key": "HKCC", "recurse": 1, "values": true}
+{"op": "reg", "key": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Notify", "recurse": 20, "limit": 30}
+{"op": "reg", "key": "HKLM\\SOFTWARE\\gibtsnicht\\x"}
+{"op": "reg", "key": "HKLM\\SAM\\SAM"}
+{"op": "reg", "key": "HKXX\\foo"}
+{"op": "reg", "key": ""}
+{"op": "reg"}
+{"op": "reg", "key": "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", "values": true}
+{"op": "reg", "key": "HKLM\\SYSTEM\\CurrentControlSet\\Control\\ComputerName", "recurse": 1, "values": true}
+{"op": "settings", "only": ["explorer"]}
+{"op": "settings", "only": ["design"]}
+{"op": "settings", "only": ["region"]}
+{"op": "settings", "only": ["users"]}
+{"op": "settings", "only": ["quiet"]}
+{"op": "settings", "only": ["network"]}
+{"op": "settings", "only": ["gaming"]}
+{"op": "settings", "only": ["hardware"]}
+{"op": "settings", "only": ["region", "nix"]}
+{"op": "settings", "only": "users gaming"}
+{"op": "settings"}
+{"op": "productkey"}

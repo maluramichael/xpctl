@@ -18,10 +18,11 @@
   xpctl.py reg KEY [--values] [--recurse N] [--json]   Registry-Schlüssel lesen (HKLM/HKCU/HKU/HKCR)
   xpctl.py settings [--only abschnitt,...] [--paths] [--json]   kuratierte Einstellungen
   xpctl.py productkey --out DATEI              XP-Produktschlüssel nur in Datei (chmod 600)
-  xpctl.py update [--file xpserver.py]   (Server auf dem XP ersetzen + neu starten)
+  xpctl.py update [--file xpserver.exe]  (Server auf dem XP ersetzen + neu starten)
+  xpctl.py migrate                       (alten Python-Server durch xpserver.exe ersetzen)
   Spiele-Werkzeuge (Server v6):
   xpctl.py press --label "Weiter >" [--window REGEX]   Button per Beschriftung, zeigt danach den Dialog
-  xpctl.py lnk show|make|launcher|icon|style ...       Verknüpfungen (ohne VBS, IShellLink per ctypes)
+  xpctl.py lnk show|make|launcher|icon|style ...       Verknüpfungen
   xpctl.py desk list|move|foldericon|group|ungroup     Gruppenordner nach desktop-gruppen.txt
   xpctl.py deskpos list|move|grid|row                  Desktop-Icons verschieben
   xpctl.py mount IMG | unmount | eject | vol           Alcohol-Laufwerk G:, CD-Laufwerk E:
@@ -213,10 +214,44 @@ def cmd_get(sock, args):
     return 0
 
 
+SERVER_DIR = Path(__file__).resolve().parent.parent / "server"
+
+
+def default_server_exe():
+    """Gebaute xpserver.exe: server/dist (build.sh) oder server/bin/Release/net35 (dotnet build)."""
+    for p in (SERVER_DIR / "dist" / "xpserver.exe", SERVER_DIR / "bin" / "Release" / "net35" / "xpserver.exe"):
+        if p.exists():
+            return p
+    return None
+
+
+def is_net(ping):
+    return ping.get("kind") == "net"
+
+
+def wait_for_server(host, port, want_sha=None, want_net=None, seconds=40):
+    """Wartet, bis der Server wieder antwortet. Liefert die ping-Antwort oder None."""
+    key = load_key()
+    deadline = time.time() + seconds
+    time.sleep(1.5)
+    while time.time() < deadline:
+        try:
+            s2 = connect(host, port, key)
+        except (OSError, SystemExit):
+            time.sleep(1)
+            continue
+        send_json(s2, {"op": "ping"})
+        after = recv_json(s2)
+        send_json(s2, {"op": "bye"})
+        s2.close()
+        if want_net is not None and is_net(after) != want_net:
+            time.sleep(1)
+            continue
+        return after
+    return None
+
+
 def cmd_update(sock, args):
-    src = Path(args.file) if args.file else Path(__file__).resolve().with_name("xpserver.py")
-    data = src.read_bytes()
-    want = hashlib.sha256(data).hexdigest()
     send_json(sock, {"op": "ping"})
     before = recv_json(sock)
     if "sha256" not in before:
@@ -224,6 +259,25 @@ def cmd_update(sock, args):
               "xpserver.py + xpserver.bat auf den XP-Rechner kopieren und neu starten.",
               file=sys.stderr)
         return 1
+    if args.file:
+        src = Path(args.file)
+    elif is_net(before):
+        src = default_server_exe()
+        if src is None:
+            print("Keine gebaute xpserver.exe gefunden. Erst bauen: cd server && ./build.sh", file=sys.stderr)
+            return 1
+    else:
+        src = SERVER_DIR / "legacy-python" / "xpserver.py"
+        print("Hinweis: auf dem XP läuft noch der alte Python-Server. Umstieg auf den .NET-Server: xpctl.py migrate",
+              file=sys.stderr)
+    if is_net(before) and src.suffix.lower() != ".exe":
+        print(f"Der Server ist die .NET-Version, {src.name} passt nicht (xpserver.exe schicken).", file=sys.stderr)
+        return 1
+    if not is_net(before) and src.suffix.lower() == ".exe":
+        print("Der Python-Server kann sich nicht durch eine Exe ersetzen. Dafür gibt es: xpctl.py migrate", file=sys.stderr)
+        return 1
+    data = src.read_bytes()
+    want = hashlib.sha256(data).hexdigest()
     if before["sha256"] == want and not args.force:
         print(f"Server ist schon auf Stand (v{before['version']}, sha256 {want[:12]}), nichts zu tun.")
         return 0
@@ -240,27 +294,135 @@ def cmd_update(sock, args):
         return 1
     print(f"eingespielt (v{before['version']} -> {src.name}), warte auf Neustart ...")
     sock.close()
-    key = load_key()
-    deadline = time.time() + 40
-    time.sleep(1.5)
-    while time.time() < deadline:
-        try:
-            s2 = connect(args.host, args.port, key)
-        except (OSError, SystemExit):
-            time.sleep(1)
-            continue
-        send_json(s2, {"op": "ping"})
-        after = recv_json(s2)
-        send_json(s2, {"op": "bye"})
-        s2.close()
-        if after["sha256"] == want:
-            print(f"neu gestartet, läuft v{after['version']} (sha256 {want[:12]})")
-            return 0
-        print(f"Server läuft, aber mit alter/anderer Version (v{after['version']}): "
-              "vermutlich Rollback nach Startfehler, siehe Konsole auf dem XP.", file=sys.stderr)
+    after = wait_for_server(args.host, args.port)
+    if after is None:
+        print("Server nach 40 s nicht wieder erreichbar, siehe xpserver.log auf dem XP.", file=sys.stderr)
         return 1
-    print("Server nach 40 s nicht wieder erreichbar, siehe Konsole auf dem XP.", file=sys.stderr)
+    if after["sha256"] == want:
+        print(f"neu gestartet, läuft v{after['version']} (sha256 {want[:12]})")
+        return 0
+    print(f"Server läuft, aber mit alter/anderer Version (v{after['version']}): "
+          "vermutlich Rollback nach Startfehler, siehe xpserver.log auf dem XP.", file=sys.stderr)
     return 1
+
+
+def _put_bytes(sock, data, path):
+    send_json(sock, {"op": "put", "path": path, "size": len(data), "name": path.rsplit("\\", 1)[-1]})
+    r = recv_json(sock)
+    if not r.get("ready"):
+        raise RuntimeError(f"put {path}: {r.get('error')}")
+    for i in range(0, len(data), CHUNK):
+        send_frame(sock, data[i:i + CHUNK])
+    r = recv_json(sock)
+    if not r.get("ok") or r.get("sha256") != hashlib.sha256(data).hexdigest():
+        raise RuntimeError(f"put {path}: {r.get('error') or 'Prüfsumme falsch'}")
+
+
+def _run(sock, cmd, timeout=60):
+    r = rpc(sock, {"op": "run", "cmd": cmd, "timeout": timeout})
+    if r is None:
+        raise RuntimeError(f"run fehlgeschlagen: {cmd}")
+    return r
+
+
+def cmd_migrate(sock, args):
+    """Alter Python-Server -> .NET-Server (xpserver.exe) auf demselben Rechner und Port."""
+    send_json(sock, {"op": "ping"})
+    before = recv_json(sock)
+    if is_net(before):
+        print(f"Auf {args.host} läuft schon der .NET-Server (v{before['version']}). Für neue Versionen: xpctl.py update")
+        return 0
+    src = Path(args.file) if args.file else default_server_exe()
+    if src is None or not src.exists():
+        print("Keine gebaute xpserver.exe gefunden. Erst bauen: cd server && ./build.sh", file=sys.stderr)
+        return 1
+    folder = before["script"].rsplit("\\", 1)[0]
+    exe = folder + "\\xpserver.exe"
+    print(f"Python-Server v{before['version']} in {folder}")
+
+    # Prozesse: python.exe mit xpserver.py und die cmd.exe der xpserver.bat-Schleife darüber
+    r = rpc(sock, {"op": "ps", "filter": "python", "cmdline": True})
+    py = [p for p in (r or {}).get("procs", []) if "xpserver.py" in (p.get("cmdline") or "")]
+    if len(py) != 1:
+        print(f"python.exe mit xpserver.py nicht eindeutig gefunden ({len(py)} Treffer), Abbruch.", file=sys.stderr)
+        return 1
+    pypid = py[0]["pid"]
+    out = _run(sock, f"wmic process where ProcessId={pypid} get ParentProcessId /value")["stdout"]
+    m = re.search(r"ParentProcessId=(\d+)", out)
+    cmdpid = int(m.group(1)) if m else 0
+    if cmdpid:
+        out = _run(sock, f"wmic process where ProcessId={cmdpid} get CommandLine /value")["stdout"]
+        if "xpserver.bat" not in out.lower():
+            cmdpid = 0
+    print(f"  python.exe PID {pypid}" + (f", xpserver.bat-Schleife PID {cmdpid}" if cmdpid else ", ohne .bat-Schleife"))
+
+    # Dateien
+    _put_bytes(sock, src.read_bytes(), exe)
+    print(f"  {src.name} -> {exe}")
+    has = _run(sock, f'if exist "{folder}\\xpserver.json" (echo json) & if exist "{folder}\\xpctl.key" (echo key)')["stdout"]
+    if "json" not in has:
+        ip = sock.getsockname()[0]
+        net = args.allow or ".".join(ip.split(".")[:3]) + ".0/24"
+        cfg = json.dumps({"allow": [net]}, indent=2) + "\n"
+        _put_bytes(sock, cfg.encode("utf-8"), folder + "\\xpserver.json")
+        print(f"  xpserver.json angelegt, erlaubt: {net}")
+    if "key" not in has:
+        _put_bytes(sock, load_key(), folder + "\\xpctl.key")
+        print("  xpctl.key angelegt (Passwort einmalig unverschlüsselt im LAN übertragen)")
+
+    # Firewall und Autostart
+    fw = _run(sock, f'netsh firewall add allowedprogram program="{exe}" name=xpserver mode=ENABLE scope=SUBNET')
+    print("  Firewall-Freigabe: " + (fw["stdout"].strip() or fw["stderr"].strip() or "?"))
+    if not args.no_autostart:
+        moved = []
+        for hive, name in (("HKCU", "Startup"), ("HKLM", "Common Startup")):
+            rr = rpc(sock, {"op": "reg", "key": f"{hive}\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders",
+                            "values": True, "recurse": 0})
+            d = None
+            for v in (rr or {}).get("tree", {}).get("values", []):
+                if v.get("name") == name:
+                    d = v.get("data")
+            if not d:
+                continue
+            lst = rpc(sock, {"op": "ls", "path": d, "files_only": True})
+            for e in (lst or {}).get("entries", []):
+                pth = e.get("path", "")
+                if not pth.lower().endswith((".bat", ".cmd")):
+                    continue
+                c = rpc(sock, {"op": "cat", "path": pth})
+                if c and "xpserver.bat" in "\n".join(c.get("lines") or []).lower():
+                    # Aus dem Autostart-Ordner heraus (dort würde Explorer jede Datei beim Login öffnen)
+                    dst = folder + "\\autostart-alt-" + pth.rsplit("\\", 1)[-1] + ".txt"
+                    _run(sock, f'move /y "{pth}" "{dst}"')
+                    moved.append((pth, dst))
+        _run(sock, f'reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run /v xpserver /t REG_SZ /d "\\"{exe}\\"" /f')
+        for a_, b_ in moved:
+            print(f"  alter Autostart entfernt: {a_} -> {b_}")
+        print("  Autostart: HKCU\\...\\Run\\xpserver -> xpserver.exe")
+
+    # Umschalten: Hilfs-Batch beendet .bat-Schleife und Python und startet die Exe
+    bat = "\r\n".join([
+        "@echo off",
+        "ping -n 3 127.0.0.1 >nul",
+        f"taskkill /F /PID {cmdpid} >nul 2>&1" if cmdpid else "rem keine .bat-Schleife",
+        f"taskkill /F /PID {pypid} >nul 2>&1",
+        "ping -n 2 127.0.0.1 >nul",
+        f'start "" /d "{folder}" "{exe}"',
+        'del "%~f0"',
+    ]) + "\r\n"
+    helper = folder + "\\xpctl-migrate.bat"
+    _put_bytes(sock, bat.encode("ascii"), helper)
+    rpc(sock, {"op": "run", "cmd": f'"{helper}"', "detach": True})
+    print("Umschalten ... (Python-Server wird beendet, xpserver.exe startet)")
+    sock.close()
+    after = wait_for_server(args.host, args.port, want_net=True, seconds=60)
+    if after is None:
+        print("Der .NET-Server meldet sich nicht. Auf dem XP nachsehen (xpserver.log, Symbol im Infobereich). "
+              "Zurück zum alten Server: xpserver.bat starten.", file=sys.stderr)
+        return 1
+    print(f"fertig: .NET-Server v{after['version']} läuft ({after.get('runtime', '')}). "
+          "Die alten Dateien (xpserver.py, xpserver.bat) können weg, wenn alles passt.")
+    return 0
 
 
 def rpc(sock, req):
@@ -1549,10 +1711,16 @@ def main() -> int:
     p.add_argument("--out", required=True, help="Zieldatei (chmod 600)")
     p.set_defaults(fn=cmd_productkey)
 
-    p = sub.add_parser("update", help="xpserver.py auf dem XP ersetzen und neu starten")
-    p.add_argument("--file", help="andere Server-Datei (Standard: xpserver.py neben xpctl.py)")
+    p = sub.add_parser("update", help="Server auf dem XP durch die neue Version ersetzen und neu starten")
+    p.add_argument("--file", help="andere Server-Datei (Standard: server/dist/xpserver.exe bzw. server/bin/Release/net35)")
     p.add_argument("--force", action="store_true", help="auch senden, wenn die Prüfsumme gleich ist")
     p.set_defaults(fn=cmd_update)
+
+    p = sub.add_parser("migrate", help="alten Python-Server auf dem XP durch xpserver.exe (.NET) ersetzen")
+    p.add_argument("--file", help="xpserver.exe (Standard: server/dist bzw. server/bin/Release/net35)")
+    p.add_argument("--allow", help="erlaubtes Netz für xpserver.json, falls keine existiert (Standard: eigenes /24)")
+    p.add_argument("--no-autostart", action="store_true", help="Autostart nicht anfassen")
+    p.set_defaults(fn=cmd_migrate)
 
     args = ap.parse_args()
     if not args.host:

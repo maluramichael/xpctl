@@ -1,0 +1,40 @@
+# Laufwerke, PE, INI, Treiber, NVIDIA (nur lesend bzw. Fehlerpfade; mount/eject/ripiso/ripcd/set nicht live)
+{"op": "vol"}
+{"op": "vol", "drives": ["C:", "E:", "G:", "Z:"]}
+{"op": "vol", "drives": ["C:\\"]}
+{"op": "toc"}
+{"op": "toc", "drive": "Z:"}
+{"op": "toc", "drive": "C:"}
+{"op": "pesec", "paths": ["C:\\WINDOWS\\notepad.exe", "C:\\WINDOWS\\system32\\kernel32.dll", "C:\\WINDOWS\\explorer.exe"]}
+{"op": "pesec", "paths": ["C:\\Games\\gibtsnicht.exe", "C:\\Games", "C:\\xpctl-net\\drives\\t.txt", "C:\\xpctl-net\\drives\\r.bin", "C:\\xpctl-net\\drives\\mz.bin", "C:\\xpctl-net\\drives\\xpserver.json"]}
+{"op": "pesec", "paths": []}
+{"op": "pesec"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini", "section": "Video", "key": "Width"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini", "section": "sound", "key": "width"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini", "key": "width"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini", "section": "Video", "key": "vsync"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini", "section": "Video", "key": "gibtsnicht"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini", "section": "Video", "key": "Width", "value": "640"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini", "section": "Fehlt", "key": "x", "value": "1"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\gibtsnicht.ini", "key": "x"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives", "key": "x"}
+{"op": "ini", "path": "C:\\xpctl-net\\drives\\t1.ini"}
+{"op": "driver", "action": "list", "filter": "gibtsnichtxyz"}
+{"op": "driver", "action": "list", "filter": "usb", "_ignore": ["devices.*.driver"]}
+{"op": "driver", "action": "list"}
+{"op": "driver", "action": "install", "inf": "C:\\xpctl-net\\drives\\gibtsnicht.inf"}
+{"op": "driver", "action": "install"}
+{"op": "nv"}
+{"op": "nv", "names": ["vsync"]}
+{"op": "nv", "names": ["gibtsnicht"]}
+{"op": "nv", "set": ["gibtsnicht", "on"]}
+{"op": "nv", "set": ["vsync"]}
+{"op": "ripiso", "drive": "Z:", "target": "C:\\xpctl-net\\drives\\x.iso"}
+{"op": "ripiso", "drive": "E:"}
+{"op": "ripcd", "drive": "Z:", "folder": "C:\\xpctl-net\\drives\\rip", "name": "x"}
+{"op": "ripcd"}
+{"op": "eject", "drive": "Z:"}
+{"op": "pesec", "paths": ["C:\\Games\\Age of Empires\\Empires.exe", "C:\\Games\\Abes Oddysee\\AbeWin.exe", "C:\\Games\\3D Ultra MiniGolf Deluxe\\minigolf.exe", "C:\\Games\\Age of Empires\\UNINSTAL.EXE"]}
+{"op": "toc", "drive": "G:"}
+{"op": "ripiso", "drive": "C:", "target": "C:\\xpctl-net\\drives\\c.iso"}
+{"op": "ripcd", "drive": "C:", "folder": "C:\\xpctl-net\\drives", "name": "c"}

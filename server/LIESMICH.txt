@@ -1,0 +1,29 @@
+xpserver für Windows XP
+=======================
+
+Was du brauchst: Windows XP mit .NET Framework 3.5. XP bringt es nicht mit: falls es unter
+Systemsteuerung > Software fehlt, einmal "dotnetfx35.exe" von Microsoft installieren.
+
+Einrichten:
+
+1. xpserver.exe in einen Ordner kopieren, zum Beispiel C:\xpctl\
+2. xpserver.exe doppelklicken.
+3. Beim ersten Start fragt ein Fenster nach Passwort und erlaubtem Netz. "Einrichten und starten" klicken.
+   Damit ist alles erledigt: Passwort (xpctl.key), Netz (xpserver.json), Autostart und Firewall-Freigabe.
+
+Danach sitzt unten rechts im Infobereich ein Symbol mit ">_".
+  grün  = bereit
+  gelb  = arbeitet gerade einen Befehl ab
+  rot   = letzter Befehl ist fehlgeschlagen
+  grau  = Verbindungen gesperrt
+
+Klick auf das Symbol öffnet das Live-Fenster mit allen Befehlen. Rechtsklick zeigt das Menü
+(sperren, Autostart, Firewall, Log, Neustart, Beenden).
+
+Wichtig: Wer das Passwort kennt und im erlaubten Netz sitzt, hat volle Kontrolle über diesen Rechner.
+Nur im eigenen LAN betreiben, nie ins Internet freigeben. Der Verkehr ist nicht verschlüsselt.
+
+Dateien neben xpserver.exe:
+  xpserver.json   Konfiguration (Vorlage: xpserver.example.json)
+  xpctl.key       Passwort (kann auch fehlen, dann fragt xpserver beim Start)
+  xpserver.log    Protokoll aller Befehle

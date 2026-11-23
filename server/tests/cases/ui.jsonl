@@ -1,0 +1,25 @@
+# ui: Fenster und Eingaben. Nur harmlose Fälle (Fehlerpfade, Screenshots). Eingaben an notepad: siehe Bericht, hwnd ist dynamisch.
+{"op": "ui", "_ignore": ["foreground", "target", "windows", "controls"]}
+{"op": "ui", "all": true, "_ignore": ["foreground", "target", "windows", "controls"]}
+{"op": "ui", "hwnd": 999999, "_ignore": ["foreground", "windows"]}
+{"op": "shot", "scale": 0.25, "_ignore": ["stream_sha256", "head.size", "tail.sha256"]}
+{"op": "shot", "_ignore": ["stream_sha256", "head.size", "tail.sha256"]}
+{"op": "shot", "scale": 0.5, "region": [0, 0, 200, 100], "_ignore": ["stream_sha256", "head.size", "tail.sha256"]}
+{"op": "shot", "scale": 5, "region": [10, 10, 11, 11], "_ignore": ["stream_sha256", "head.size", "tail.sha256"]}
+{"op": "shot", "region": [-50, -50, 100, 100], "scale": 0.3, "_ignore": ["stream_sha256", "head.size", "tail.sha256"]}
+{"op": "shot", "region": [500, 500, 400, 400]}
+{"op": "shot", "hwnd": 999999}
+{"op": "press", "hwnd": 999999}
+{"op": "press"}
+{"op": "focus", "hwnd": 999999}
+{"op": "focus"}
+{"op": "close"}
+{"op": "settext", "hwnd": 999999}
+{"op": "settext", "hwnd": 999999, "text": "x"}
+{"op": "click", "x": 5}
+{"op": "click", "x": 5, "y": 5, "button": "foo", "move_only": false}
+{"op": "key", "keys": ["FOO"]}
+{"op": "key", "keys": ["FOO+A"]}
+{"op": "key", "keys": ["ctrl+bar"]}
+{"op": "key"}
+{"op": "type"}
