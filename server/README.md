@@ -8,6 +8,8 @@
 2. Doppelklicken.
 3. Der Einrichtungsdialog fragt nach Passwort und erlaubtem Netz (vorausgefüllt mit dem Netz des Rechners). Autostart und Firewall-Freigabe sind schon angehakt. "Einrichten und starten" klicken.
 
+<img src="../docs/img/einrichtung.png" width="480" alt="Einrichtungsdialog">
+
 Fertig. Beim nächsten Login startet der Server von selbst. Wer lieber von Hand einrichtet: `xpserver.json` und `xpctl.key` neben die Exe legen, dann erscheint kein Dialog.
 
 Umstieg vom alten Python-Server: auf dem Client `./xpctl.py migrate` (siehe `client/README.md`).
@@ -21,9 +23,13 @@ Umstieg vom alten Python-Server: auf dem Client `./xpctl.py migrate` (siehe `cli
 | rot | der letzte Befehl ist fehlgeschlagen (8 Sekunden lang) |
 | grau | Verbindungen gesperrt |
 
-Linksklick öffnet das Live-Fenster: Status, Zahl der Befehle und Fehler, offene Verbindungen, Laufzeit, Aktivität der letzten 30 Minuten und das Protokoll mit Filter (Strg+F) und "Nur Fehler". Esc schließt es wieder ins Infobereich.
+Linksklick öffnet das Live-Fenster: Status, Zahl der Befehle und Fehler, offene Verbindungen, Laufzeit, Aktivität der letzten 30 Minuten und das Protokoll mit Filter (Strg+F) und "Nur Fehler". Esc oder × legt es zurück in den Infobereich.
+
+![Live-Fenster](../docs/img/live-fenster.png)
 
 Rechtsklick zeigt das Menü:
+
+<img src="../docs/img/menue.png" width="232" alt="Menü am Symbol">
 
 - **Verbindungen sperren**: neue Verbindungen werden abgelehnt, laufende Befehle laufen zu Ende. Praktisch, wenn gerade jemand am Rechner sitzt.
 - **Hinweis bei jedem Befehl**: Sprechblase pro Befehl (Standard aus).
@@ -49,7 +55,7 @@ Der Server nimmt sich nie selbst den Fokus und zeigt keine Sprechblasen, solange
 
 Passwort, in dieser Reihenfolge: `--key-file DATEI`, Umgebungsvariable `XPCTL_KEY`, `xpctl.key` neben der Exe, sonst fragt ein Dialog (mit "Merken").
 
-Weitere Startoptionen: `--port N` (Standard 5050), `--bind ADRESSE` (Standard 0.0.0.0), `--no-watchdog`.
+Weitere Startoptionen: `--port N` (Standard 5050), `--bind ADRESSE` (Standard 0.0.0.0), `--no-watchdog`, `--demo` (zeigt neutrale Werte statt Rechnername, IPs und Pfad, für Screenshots; die Bilder hier sind so entstanden).
 
 ## Dateien neben der Exe
 

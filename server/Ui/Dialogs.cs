@@ -259,7 +259,7 @@ namespace XpServer.Ui
             using (var d = new DarkDialog("Willkommen bei xpserver", "Einmal einrichten, danach läuft alles von selbst.", 480, needKey ? 420 : 360))
             {
                 int y = DarkDialog.Top0;
-                d.AddText("Dieser Rechner (" + MyIp() + ") wird damit per xpctl fernsteuerbar. Nur Rechner aus dem erlaubten Netz " +
+                d.AddText("Dieser Rechner (" + Program.Show(MyIp()) + ") wird damit per xpctl fernsteuerbar. Nur Rechner aus dem erlaubten Netz " +
                           "mit dem richtigen Passwort kommen rein.", y, 32, Theme.Dim);
                 y += 40;
                 Field pw = null, pw2 = null;
@@ -269,7 +269,7 @@ namespace XpServer.Ui
                     pw2 = d.AddField("PASSWORT WIEDERHOLEN", y, true); y += 56;
                 }
                 var net = d.AddField("ERLAUBTES NETZ (CIDR, mehrere mit Komma)", y, false); y += 56;
-                net.Box.Text = GuessNet();
+                net.Box.Text = Program.Show(GuessNet());
                 var auto = d.AddCheck("Mit Windows starten", "Eintrag unter HKCU\\...\\Run für diesen Benutzer", y, true); y += 42;
                 var fw = d.AddCheck("Firewall-Freigabe einrichten", "netsh firewall: xpserver.exe im lokalen Subnetz erlauben", y, true);
                 var err = d.AddText("", d.ClientSize.Height - 72, 16, Theme.Red);

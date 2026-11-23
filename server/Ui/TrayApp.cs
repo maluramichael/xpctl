@@ -25,7 +25,11 @@ namespace XpServer.Ui
         public TrayApp()
         {
             _inst = this;
-            _ui = System.Threading.SynchronizationContext.Current ?? new WindowsFormsSynchronizationContext();
+            // Immer einen WinForms-Kontext auf diesem (UI-)Thread anlegen. Nach einem Dialog vor dem Start
+            // (Ersteinrichtung, Passwort) steht in Current nur der Standardkontext, dessen Post im Threadpool
+            // landet: Fenster aus Post wären dann auf einem Thread ohne Nachrichtenschleife und hängen.
+            _ui = new WindowsFormsSynchronizationContext();
+            System.Threading.SynchronizationContext.SetSynchronizationContext(_ui);
 
             var m = new ContextMenuStrip { Renderer = new DarkMenu(), ShowImageMargin = true, Font = Theme.Ui };
             m.BackColor = Theme.Panel;
@@ -68,7 +72,7 @@ namespace XpServer.Ui
             Space(more.DropDown);
             m.Opening += (s, e) =>
             {
-                _head.Text = "xpserver v" + Program.Version + "  ·  Port " + Program.Opt.Port;
+                _head.Text = "xpserver v" + Program.Version + "  ·  Port " + Program.ShownPort;
                 _locked.Checked = Server.Locked;
                 _notify.Checked = Desk.GetFlag("notify", false);
                 _autostart.Checked = Desk.Autostart;
@@ -88,7 +92,8 @@ namespace XpServer.Ui
             _icon.Visible = true;
             _anim.Start();
 
-            if (!Program.Opt.AfterUpdate && Program.Opt.CrashCount == 0 && !Desk.GetFlag("welcomed", false))
+            if (Program.Opt.Demo) Post(ShowDash);   // Demo: Fenster gleich zeigen
+            else if (!Program.Opt.AfterUpdate && Program.Opt.CrashCount == 0 && !Desk.GetFlag("welcomed", false))
             {
                 Desk.SetFlag("welcomed", true);
                 Balloon("xpserver läuft", "Port " + Program.Opt.Port + ". Klick auf das Symbol zeigt das Live-Fenster.", ToolTipIcon.Info);
@@ -120,7 +125,7 @@ namespace XpServer.Ui
                 Render(st);
             }
             else if (st != _shown) Render(st);
-            string tip = string.Format("xpserver :{0}  ·  {1}\n{2} Befehle, {3} Fehler", Program.Opt.Port,
+            string tip = string.Format("xpserver :{0}  ·  {1}\n{2} Befehle, {3} Fehler", Program.ShownPort,
                 st == TrayState.Locked ? "gesperrt" : st == TrayState.Busy ? "arbeitet" : "bereit", Server.OpsTotal, Server.ErrorsTotal);
             if (tip.Length > 63) tip = tip.Substring(0, 63);
             if (tip != _lastTip) { _icon.Text = tip; _lastTip = tip; }

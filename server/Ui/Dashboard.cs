@@ -165,11 +165,11 @@ namespace XpServer.Ui
             using (var ico = IconMaker.Draw(36, st, (float)(DateTime.Now.Millisecond / 1000.0)))
                 g.DrawImage(ico, Pad, 14);
             TextRenderer.DrawText(g, "xpserver", Theme.Title, new Point(Pad + 46, 14), Theme.Text, TextFormatFlags.NoPadding);
-            TextRenderer.DrawText(g, "v" + Program.Version + "  ·  " + Environment.MachineName.ToLowerInvariant() + "  ·  .NET " + Environment.Version.Major + "." + Environment.Version.Minor,
+            TextRenderer.DrawText(g, "v" + Program.Version + "  ·  " + Program.Show(Environment.MachineName).ToLowerInvariant() + "  ·  .NET " + Environment.Version.Major + "." + Environment.Version.Minor,
                 Theme.Ui, new Point(Pad + 47, 36), Theme.Dim, TextFormatFlags.NoPadding);
             string status = Server.Locked ? "GESPERRT" : busy ? "ARBEITET" : "LAUSCHT";
             Color sc = Server.Locked ? Theme.Red : busy ? Theme.Amber : Theme.Accent;
-            string pillText = status + "  :" + Program.Opt.Port;
+            string pillText = status + "  :" + Program.ShownPort;
             var psz = TextRenderer.MeasureText(pillText, Theme.UiBold);
             var pill = new RectangleF(w - Pad - 2 * Btn - 4 - Gap - (psz.Width + 26), Pad + 18 - 11, psz.Width + 26, 22);
             using (var p = Theme.Round(pill, 11))
@@ -183,7 +183,7 @@ namespace XpServer.Ui
                             up.TotalHours >= 1 ? string.Format("{0}h {1:00}m", (int)up.TotalHours, up.Minutes) :
                             string.Format("{0}m {1:00}s", up.Minutes, up.Seconds);
             var nets = new List<string>();
-            foreach (var n in Program.Allow) nets.Add(n.ToString());
+            foreach (var n in Program.Allow) nets.Add(Program.Show(n.ToString()));
             var cards = new[] {
                 new[] { "BEFEHLE", Server.OpsTotal.ToString(), "seit Start" },
                 new[] { "FEHLER", Server.ErrorsTotal.ToString(), Server.ErrorsTotal == 0 ? "alles sauber" : "siehe Log" },
@@ -247,7 +247,7 @@ namespace XpServer.Ui
             Surface(g, new RectangleF(Pad, LogY, inner, h - Foot - LogY));
 
             // Fuß: nur der Log-Pfad, bündig mit den Flächen
-            TextRenderer.DrawText(g, "Log: " + Log.FilePath, Theme.Small, new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint,
+            TextRenderer.DrawText(g, "Log: " + Program.Show(Log.FilePath), Theme.Small, new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint,
                 TextFormatFlags.NoPadding | TextFormatFlags.PathEllipsis | TextFormatFlags.VerticalCenter);
             using (var pen = new Pen(Theme.Faint))
                 for (int i = 0; i < 3; i++) g.DrawLine(pen, w - 4 - i * 4, h - 3, w - 3, h - 4 - i * 4);

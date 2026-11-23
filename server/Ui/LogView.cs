@@ -172,7 +172,7 @@ namespace XpServer.Ui
                 TextRenderer.DrawText(g, l.Time.ToString("HH:mm:ss"), Theme.Mono, new Point(x, y + 3), Theme.Faint, TextFormatFlags.NoPrefix);
                 x += TimeW;
 
-                string text = l.Text;
+                string text = Program.Show(l.Text);
                 Color tag = Theme.Dim;
                 string tagText = null;
                 switch (l.Kind)
@@ -197,7 +197,7 @@ namespace XpServer.Ui
                 int right = textRight;
                 if (l.Client != null && l.Kind == LogKind.Op)
                 {
-                    TextRenderer.DrawText(g, l.Client, Theme.Small, new Rectangle(right - ClientW, y, ClientW, RowH), Theme.Faint,
+                    TextRenderer.DrawText(g, Program.Show(l.Client), Theme.Small, new Rectangle(right - ClientW, y, ClientW, RowH), Theme.Faint,
                         TextFormatFlags.NoPrefix | TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
                     right -= ClientW + 8;
                 }

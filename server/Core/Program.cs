@@ -33,6 +33,7 @@ namespace XpServer
             public bool AfterUpdate;
             public int CrashCount;
             public bool NoWatchdog;
+            public bool Demo;           // --demo: neutrale Anzeige für Screenshots (Rechnername, IPs, Pfad, Port)
             public int WatchPid;        // --watchdog PID: dieser Prozess ist nur der Wächter
             public List<string> Passthrough = new List<string>();   // Argumente für Neustarts
         }
@@ -175,6 +176,24 @@ namespace XpServer
             return r;
         }
 
+        /// <summary>Port, wie er in der Oberfläche erscheint (im Demo-Modus immer der Standardport).</summary>
+        public static int ShownPort { get { return Opt.Demo ? DefaultPort : Opt.Port; } }
+
+        static readonly System.Text.RegularExpressions.Regex PrivIp =
+            new System.Text.RegularExpressions.Regex(@"\b(?:10|172|192)\.\d{1,3}\.\d{1,3}\.(\d{1,3})\b");
+
+        /// <summary>Text für die Oberfläche. Im Demo-Modus (--demo, für Screenshots in der Doku) werden
+        /// Rechnername, private IPs, Programmordner und Port durch neutrale Werte ersetzt.</summary>
+        public static string Show(string s)
+        {
+            if (s == null || Opt == null || !Opt.Demo) return s;
+            s = PrivIp.Replace(s, m => "192.168.1." + m.Groups[1].Value);
+            s = s.Replace(Here.TrimEnd('\\'), @"C:\xpctl");
+            s = System.Text.RegularExpressions.Regex.Replace(s, System.Text.RegularExpressions.Regex.Escape(Environment.MachineName), "retro-pc",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return s.Replace(":" + Opt.Port, ":" + DefaultPort).Replace("Port " + Opt.Port, "Port " + DefaultPort);
+        }
+
         static Options Parse(string[] a)
         {
             var o = new Options();
@@ -194,6 +213,7 @@ namespace XpServer
                     case "--config": o.Config = next(); o.Passthrough.Add(x); o.Passthrough.Add(o.Config); break;
                     case "--key-file": o.KeyFile = next(); o.Passthrough.Add(x); o.Passthrough.Add(o.KeyFile); break;
                     case "--no-watchdog": o.NoWatchdog = true; o.Passthrough.Add(x); break;
+                    case "--demo": o.Demo = true; o.Passthrough.Add(x); break;
                     case "--after-update": o.AfterUpdate = true; break;
                     case "--crash-count": o.CrashCount = int.Parse(next()); break;
                     case "--watchdog": o.WatchPid = int.Parse(next()); break;

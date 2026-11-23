@@ -1,6 +1,8 @@
-# xpctl
+# <img src="docs/img/symbol.png" width="40" align="top"> xpctl
 
 Fernsteuerung für Windows-XP-Rechner aus dem Terminal. Gedacht für Retro-PCs: Programme und Installer starten, Dateien übertragen, Fenster lesen und bedienen, Registry und Einstellungen auslesen, Desktop-Verknüpfungen ordnen, CD-Images einhängen, CDs sichern, Treiber installieren, Spiele-Versionen bestimmen.
+
+![Live-Fenster von xpserver](docs/img/live-fenster.png)
 
 Zwei Teile:
 
