@@ -1,63 +1,63 @@
-# Regeln für Ops im .NET-Server
+# Rules for ops in the .NET server
 
-Der Port ist abgeschlossen (alle 46 Ops, 243 Vergleichsfälle gleich). Diese Datei bleibt als Regelwerk für neue Ops und Änderungen.
+The port is finished (all 46 ops, 243 comparison cases identical). This file stays as the rulebook for new ops and changes.
 
-Referenz war `server/legacy-python/xpserver.py` (Python 3.4). Ziel: Der .NET-Server liefert für jede Anfrage
-**dieselbe JSON-Antwort** wie der Python-Server (Feldnamen, Reihenfolge, Typen, Texte, Fehlermeldungen).
-Der Client `client/xpctl.py` spricht mit beiden Servern; abgesehen von `update` und `migrate` behandelt er sie gleich. Neue oder geänderte Ops: Antwortformat so halten, dass ältere Clients weiter funktionieren.
+The reference was `server/legacy-python/xpserver.py` (Python 3.4). Goal: for every request the .NET server returns
+**the same JSON answer** as the Python server (field names, order, types, texts, error messages).
+The client `client/xpctl.py` talks to both servers; apart from `update` and `migrate` it treats them the same. New or changed ops: keep the response format so that older clients keep working.
 
-## Gerüst (fertig, nicht ändern ohne Absprache)
+## Scaffolding (done, don't change without agreement)
 
-- `Core/Net.cs`: Ops sind `static J Name(Conn c, Req r)` mit Attribut `[Op("name")]`, werden per Reflection gefunden.
-  Jede Gruppe hat eine eigene Datei `Ops/<Gruppe>.cs` (eigene `static class`, eigene P/Invoke-Deklarationen darin).
-- `J` = JSON-Objekt (Einfügereihenfolge wie Python-dict). `J.Ok("k", v, ...)`, `J.Err("text")`, `J.O(...)`.
-  Listen: `List<object>` oder `List<J>`. Zahlen als `long` (Python int) bzw. `double` (Python float). Kein `int`-Mix nötig, aber erlaubt.
+- `Core/Net.cs`: ops are `static J Name(Conn c, Req r)` with the attribute `[Op("name")]`, found via reflection.
+  Each group has its own file `Ops/<Group>.cs` (its own `static class`, its own P/Invoke declarations inside).
+- `J` = JSON object (insertion order like a Python dict). `J.Ok("k", v, ...)`, `J.Err("text")`, `J.O(...)`.
+  Lists: `List<object>` or `List<J>`. Numbers as `long` (Python int) or `double` (Python float). No need to mix in `int`, but allowed.
 - `Req`: `r.Need("k")` = `req["k"]` (KeyError), `r.Str("k", def)` = `req.get("k", def)`, `r.Or("k", def)` = `req.get("k") or def`,
   `r.Int`, `r.Dbl`, `r.Bool` (= `bool(req.get(k))`), `r.List`, `r.Strs`, `r.Has`.
-- Fehler: `throw new OpError("text")` wird zu `"ValueError: text"` (wie Python `raise ValueError`). Anderer Python-Typ:
-  `new OpError("KeyError", "...")`. Unerwartete .NET-Ausnahmen werden grob auf Python-Namen gemappt (`Server.ErrText`).
+- Errors: `throw new OpError("text")` becomes `"ValueError: text"` (like Python `raise ValueError`). Other Python type:
+  `new OpError("KeyError", "...")`. Unexpected .NET exceptions are roughly mapped to Python names (`Server.ErrText`).
 - `Conn`: `c.SendJson(o)`, `c.SendFrame(bytes[, off, len])`, `c.RecvFrame()`, `Conn.Chunk` (256 KB), `Conn.MaxFrame`.
-- `Core/Reg.cs`: winreg-Nachbau (`Reg.Read` = reg_read, `Reg.Get` = rget, `Reg.Subs` = rsubs, `Reg.Vals` = rvals,
+- `Core/Reg.cs`: winreg replica (`Reg.Read` = reg_read, `Reg.Get` = rget, `Reg.Subs` = rsubs, `Reg.Vals` = rvals,
   `Reg.Show` = show_data, `Reg.Hive` = hive_handle, `Reg.Split` = split_regpath, `Reg.Plain` = _plain, `Reg.Open` + `Key.Query/Values/SubKeys`).
-  Typen wie winreg: SZ/EXPAND_SZ = string (nicht expandiert), MULTI_SZ = List<object>, DWORD/QWORD = long, binär = byte[].
+  Types like winreg: SZ/EXPAND_SZ = string (not expanded), MULTI_SZ = List<object>, DWORD/QWORD = long, binary = byte[].
 - `Core/Proc.cs`: `Proc.Sh(cmd, timeout)` = sh(), `Proc.Run(Proc.Shell(cmd), timeout, mergeErr)` = Popen(shell=True)+communicate,
-  `Proc.Oem` = oem_encoding(), `Proc.KillTree(pid)`, `Proc.Detach(cmd)`. Nie eigene `Process.Start` mit Konsolenfenster:
-  immer `CreateNoWindow = true`, `UseShellExecute = false` (die App ist ein GUI-Prozess, sonst blitzen cmd-Fenster auf).
+  `Proc.Oem` = oem_encoding(), `Proc.KillTree(pid)`, `Proc.Detach(cmd)`. Never your own `Process.Start` with a console window:
+  always `CreateNoWindow = true`, `UseShellExecute = false` (the app is a GUI process, otherwise cmd windows flash up).
 - `Core/Common.cs`: `Common.SysRoot()`, `FolderPath(csidl)`, `AllUsersDesktop`, `MyDesktop`, `LauncherName()`, `CdDrive(r)`,
   `VolLabel(drive)`, `NormDate`, `ProgramKind`, `CollectPrograms()`, `KbRe`, `UpdateNameRe`, `HklmUninstall`, `GetDriveTypeW`.
 - `Core/Config.cs`: `Cfg.Get/Str/Strs/Need(key, what)` = CFG / cfg_need.
-- `Py.Truthy`, `Py.Repr` (= str()), `Py.SortBy(list, key)` (stabile Sortierung wie sorted(key=...), Ordinal).
+- `Py.Truthy`, `Py.Repr` (= str()), `Py.SortBy(list, key)` (stable sort like sorted(key=...), ordinal).
 
-## .NET-3.5-Fallen
+## .NET 3.5 traps
 
-- Nicht vorhanden (erst 4.0): `string.Join(IEnumerable)` (nur `string[]`), `string.IsNullOrWhiteSpace`, `Enum.HasFlag`,
+- Not available (only from 4.0): `string.Join(IEnumerable)` (only `string[]`), `string.IsNullOrWhiteSpace`, `Enum.HasFlag`,
   `Stream.CopyTo`, `Tuple`, `Lazy`, `Task`, `ConcurrentDictionary`, `File.ReadLines`, `Directory.EnumerateFiles`,
-  `RegistryKey.Handle`, `Environment.Is64BitOperatingSystem`. Der Compiler meldet das.
-- `List.Sort` ist instabil: für Python-`sorted` immer `Py.SortBy` oder LINQ `OrderBy` nehmen.
-- Python-`%` mit Zahlen, `round()` (Banker's Rounding in Py3 wie .NET `Math.Round` Standard), Gleitkomma-Ausgabe: `Json` schreibt doubles wie Python (`1.0`, `0.1`).
-- Zeit: `time.strftime` lokal, `os.path.getmtime` = `File.GetLastWriteTime`. Dateinamen-Sortierung von `os.listdir` (NTFS: alphabetisch, wie `Directory.GetFileSystemEntries`).
-- Python `str.lower()` = `ToLowerInvariant()`. Regex: Python `re` ≈ .NET Regex, aber `\d` in .NET matcht Unicode-Ziffern (egal), `$` matcht vor `\n` in beiden.
-- COM (IShellLink, IPersistFile): Client-Threads sind STA. `[ComImport]`-Interfaces oder vtable-Aufrufe wie im Python-Code.
-- `zlib.compress`: .NET 3.5 hat nur `DeflateStream` (roh). zlib = 2 Byte Header (0x78 0x9C) + Deflate + Adler-32 (Big Endian).
-- Prozessname der App ist `xpserver.exe` (steht schon in MOUNT_SAFE_FG).
+  `RegistryKey.Handle`, `Environment.Is64BitOperatingSystem`. The compiler tells you.
+- `List.Sort` is unstable: for Python `sorted` always use `Py.SortBy` or LINQ `OrderBy`.
+- Python `%` with numbers, `round()` (banker's rounding in Py3, same as the .NET `Math.Round` default), float output: `Json` writes doubles like Python (`1.0`, `0.1`).
+- Time: `time.strftime` is local, `os.path.getmtime` = `File.GetLastWriteTime`. File name order of `os.listdir` (NTFS: alphabetical, like `Directory.GetFileSystemEntries`).
+- Python `str.lower()` = `ToLowerInvariant()`. Regex: Python `re` ≈ .NET Regex, but `\d` in .NET matches Unicode digits (doesn't matter here), `$` matches before `\n` in both.
+- COM (IShellLink, IPersistFile): client threads are STA. `[ComImport]` interfaces or vtable calls as in the Python code.
+- `zlib.compress`: .NET 3.5 only has `DeflateStream` (raw). zlib = 2 byte header (0x78 0x9C) + deflate + Adler-32 (big endian).
+- The app's process name is `xpserver.exe` (already listed in MOUNT_SAFE_FG).
 
-## Testen auf einem XP-Rechner
+## Testing on an XP machine
 
-- Bauen: `cd server && dotnet build -c Release` -> `server/bin/Release/net35/xpserver.exe`.
-- Jede Gruppe bekommt einen eigenen Testport (5051 bis 5059) und Ordner auf dem XP-Rechner, parallel zum Referenzserver auf 5050. Firewall-Port vorher freigeben. Einrichten:
-  `client/xpctl.py put server/bin/Release/net35/xpserver.exe 'C:\xpctl-net\<gruppe>\' --mkdir`,
-  `client/xpctl.py run 'copy /y C:\xpctl-net\core\xpserver.json C:\xpctl-net\<gruppe>\ & copy /y C:\xpctl\xpctl.key C:\xpctl-net\<gruppe>\'`,
-  starten: `client/xpctl.py run --detach 'C:\xpctl-net\<gruppe>\xpserver.exe --port <P> --no-watchdog'`.
-  Neue Version: eigenen Prozess per PID beenden (`client/xpctl.py ps xpserver --cmdline`, dann `client/xpctl.py kill <PID>`), Exe neu kopieren, neu starten.
-- Vergleich: `server/tests/parity.py --b <P> server/tests/cases/<gruppe>.jsonl` (A = Python-Server 5050). Fälle als JSON-Zeilen,
-  `_ignore` für Felder, die sich zwischen zwei Aufrufen ändern dürfen.
-- `export XPCTL_HOST=<Adresse des XP-Rechners>`. Passwort wie beim Client (`~/.config/xpctl/key`).
+- Build: `cd server && dotnet build -c Release` -> `server/bin/Release/net35/xpserver.exe`.
+- Each group gets its own test port (5051 to 5059) and folder on the XP machine, running next to the reference server on 5050. Open the firewall port first. Setup:
+  `client/xpctl.py put server/bin/Release/net35/xpserver.exe 'C:\xpctl-net\<group>\' --mkdir`,
+  `client/xpctl.py run 'copy /y C:\xpctl-net\core\xpserver.json C:\xpctl-net\<group>\ & copy /y C:\xpctl\xpctl.key C:\xpctl-net\<group>\'`,
+  start: `client/xpctl.py run --detach 'C:\xpctl-net\<group>\xpserver.exe --port <P> --no-watchdog'`.
+  New version: stop your own process by PID (`client/xpctl.py ps xpserver --cmdline`, then `client/xpctl.py kill <PID>`), copy the exe again, restart.
+- Compare: `server/tests/parity.py --b <P> server/tests/cases/<group>.jsonl` (A = Python server on 5050). Cases as JSON lines,
+  `_ignore` for fields that may change between two calls.
+- `export XPCTL_HOST=<address of the XP machine>`. Password as for the client (`~/.config/xpctl/key`).
 
-## Verbote auf dem Testrechner
+## Don'ts on the test machine
 
-- Python-Server (Port 5050, python.exe, xpserver.bat-cmd.exe) und fremde xpserver.exe-Instanzen nie beenden oder neu starten. Nur den eigenen Prozess per PID.
-- Nichts installieren/deinstallieren, keine Treiber, keine NVIDIA-Einstellungen setzen, kein CD-Laufwerk auswerfen, keine Images einhängen,
-  keine Desktop-Verknüpfungen oder Icon-Positionen dauerhaft ändern, nichts außerhalb `C:\xpctl-net\<gruppe>\` schreiben oder löschen.
-  Solche Ops portieren, aber nur mit harmlosen Fehlerfällen oder Testobjekten im eigenen Ordner prüfen; im Bericht als "portiert, nicht live geprüft" melden.
-- Eingabe-Ops (click/type/key/focus/close/press/settext) nur gegen Fenster, die man selbst gestartet hat (z. B. notepad), und danach schließen.
-- Keine Dateien außerhalb von `server/Ops/<Gruppe>.cs` und `server/tests/cases/<gruppe>.jsonl` ändern. Fehlt etwas im Gerüst: im Bericht melden, lokal in der eigenen Datei lösen.
+- Never stop or restart the Python server (port 5050, python.exe, xpserver.bat cmd.exe) or other xpserver.exe instances. Only your own process, by PID.
+- Don't install or uninstall anything, no drivers, no NVIDIA settings, don't eject the CD drive, don't mount images,
+  don't permanently change desktop shortcuts or icon positions, don't write or delete anything outside `C:\xpctl-net\<group>\`.
+  Port such ops anyway, but only test them with harmless error cases or test objects in your own folder; report them as "ported, not tested live".
+- Input ops (click/type/key/focus/close/press/settext) only against windows you started yourself (for example notepad), and close them afterwards.
+- Don't change files outside `server/Ops/<Group>.cs` and `server/tests/cases/<group>.jsonl`. If something is missing from the scaffolding: report it, solve it locally in your own file.

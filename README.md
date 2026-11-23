@@ -1,51 +1,53 @@
 # <img src="docs/img/symbol.png" width="40" align="top"> xpctl
 
-Fernsteuerung für Windows-XP-Rechner aus dem Terminal. Gedacht für Retro-PCs: Programme und Installer starten, Dateien übertragen, Fenster lesen und bedienen, Registry und Einstellungen auslesen, Desktop-Verknüpfungen ordnen, CD-Images einhängen, CDs sichern, Treiber installieren, Spiele-Versionen bestimmen.
+Remote control for Windows XP machines from your terminal. Built for retro PCs: start programs and installers, transfer files, read and operate windows, read the registry and system settings, arrange desktop shortcuts, mount CD images, back up CDs, install drivers, identify game versions and edit save games.
 
-![Live-Fenster von xpserver](docs/img/live-fenster.png)
+![xpserver live window](docs/img/live-fenster.png)
 
-Zwei Teile:
+Note: the program itself speaks German for now. The tray UI, CLI help, command output and the screenshots are in German, the docs are in English.
 
-| Teil | Läuft auf | Was |
+Two parts:
+
+| Part | Runs on | What |
 |---|---|---|
-| [`server/`](server/) | Windows XP | `xpserver.exe`: Symbol im Infobereich mit Live-Fenster, .NET 3.5, eine Datei ohne Installation |
-| [`client/`](client/) | macOS, Linux, Windows | `xpctl.py`: ein Python-Skript ohne Abhängigkeiten (Python 3.9+) |
+| [`server/`](server/) | Windows XP | `xpserver.exe`: tray icon with a live window, .NET 3.5, a single file, no installation |
+| [`client/`](client/) | macOS, Linux, Windows | `xpctl.py`: a single Python script with no dependencies (Python 3.9+) |
 
-## In fünf Minuten
+## Five-minute setup
 
-**Auf dem XP-Rechner**
+**On the XP machine**
 
-1. `xpserver.exe` bauen: `cd server && ./build.sh` (braucht nur das [dotnet SDK](https://dotnet.microsoft.com/download), läuft auf macOS, Linux und Windows). Ergebnis: `server/dist/xpserver.exe`.
-   Auf dem XP-Rechner muss .NET Framework 3.5 installiert sein (Windows XP bringt es nicht mit, Installer `dotnetfx35.exe` von Microsoft).
-2. In einen Ordner legen, zum Beispiel `C:\xpctl\`, und doppelklicken.
-3. Im Einrichtungsdialog ein Passwort vergeben und "Einrichten und starten" klicken. Netz, Autostart und Firewall sind vorausgefüllt.
+1. Build `xpserver.exe`: `cd server && ./build.sh` (needs only the [dotnet SDK](https://dotnet.microsoft.com/download), works on macOS, Linux and Windows). Result: `server/dist/xpserver.exe`.
+   The XP machine needs .NET Framework 3.5 (Windows XP does not ship with it, the installer is `dotnetfx35.exe` from Microsoft).
+2. Put it in a folder, for example `C:\xpctl\`, and double-click it.
+3. In the setup dialog, choose a password and click "Einrichten und starten" (set up and start). Network, autostart and firewall are prefilled.
 
-**Auf dem eigenen Rechner**
+**On your own machine**
 
     git clone https://github.com/maluramichael/xpctl && cd xpctl/client
-    export XPCTL_HOST=192.168.1.50              # Adresse des XP-Rechners
-    mkdir -p ~/.config/xpctl && printf '%s' 'PASSWORT' > ~/.config/xpctl/key && chmod 600 ~/.config/xpctl/key
+    export XPCTL_HOST=192.168.1.50              # address of the XP machine
+    mkdir -p ~/.config/xpctl && printf '%s' 'PASSWORD' > ~/.config/xpctl/key && chmod 600 ~/.config/xpctl/key
     ./xpctl.py ping
     ./xpctl.py run ver
     ./xpctl.py sysinfo
 
-Alle Befehle: [`client/README.md`](client/README.md). Server, Symbol, Konfiguration, Update: [`server/README.md`](server/README.md).
+All commands: [`client/README.md`](client/README.md). Server, tray icon, configuration, updates: [`server/README.md`](server/README.md).
 
-Wer noch den alten Python-Server (`xpserver.py` + `xpserver.bat`) nutzt: `./xpctl.py migrate` stellt den XP-Rechner in einem Schritt auf `xpserver.exe` um.
+Still running the old Python server (`xpserver.py` + `xpserver.bat`)? `./xpctl.py migrate` switches the XP machine over to `xpserver.exe` in one step.
 
-## Sicherheit
+## Security
 
-Der Server führt auf Anforderung beliebige Befehle aus. Wer das Passwort kennt und im erlaubten Netz sitzt, hat volle Kontrolle über den XP-Rechner. Der Verkehr ist nicht verschlüsselt (die Anmeldung schon, per HMAC-SHA256). Nur im eigenen LAN betreiben, nie ins Internet freigeben.
+The server runs arbitrary commands on request. Anyone who knows the password and sits in an allowed network has full control over the XP machine. Traffic is not encrypted. The login uses HMAC-SHA256 challenge-response, so the password never goes over the wire. Only run it in your own LAN, never expose it to the internet.
 
-## Ordner
+## Folders
 
-| Pfad | Inhalt |
+| Path | Contents |
 |---|---|
-| `client/` | `xpctl.py`, Spielstand-Formate (`savegames/`) mit Tests, Versions- und Kopierschutz-Datenbank, Beispiel für Desktop-Gruppen |
-| `server/` | Quellcode von `xpserver.exe` (C#), `build.sh`, Beispielkonfiguration, Tests, alter Python-Server unter `legacy-python/` |
-| `docs/` | Protokoll |
-| `tools/` | `wpchanger.pyw`: kleiner Wallpaper-Wechsler für den XP-Rechner (`pythonw wpchanger.pyw ORDNER`, alle 30 Minuten ein zufälliges BMP) |
+| `client/` | `xpctl.py`, save game formats (`savegames/`) with tests, game version and copy protection databases, example for desktop groups |
+| `server/` | Source of `xpserver.exe` (C#), `build.sh`, example config, tests, the old Python server under `legacy-python/` |
+| `docs/` | [Protocol](docs/protocol.md) |
+| `tools/` | `wpchanger.pyw`: small wallpaper changer for the XP machine (`pythonw wpchanger.pyw FOLDER`, a random BMP every 30 minutes) |
 
-## Lizenz
+## License
 
-MIT, siehe `LICENSE`.
+MIT, see `LICENSE`.

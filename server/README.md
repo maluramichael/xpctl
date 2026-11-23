@@ -1,151 +1,154 @@
-# xpserver (Server für Windows XP)
+# xpserver (server for Windows XP)
 
-`xpserver.exe` läuft auf dem XP-Rechner als Symbol im Infobereich und nimmt Befehle von `xpctl.py` entgegen. Eine einzelne Exe ohne Installation, gebaut für .NET Framework 3.5. Windows XP bringt das nicht mit: einmalig `dotnetfx35.exe` von Microsoft installieren, falls es noch fehlt (zu sehen unter Software als "Microsoft .NET Framework 3.5").
+`xpserver.exe` runs on the XP machine as a tray icon and takes commands from `xpctl.py`. A single exe with no installation, built for .NET Framework 3.5. Windows XP does not ship with it: install `dotnetfx35.exe` from Microsoft once if it is missing (it shows up under Add or Remove Programs as "Microsoft .NET Framework 3.5").
 
-## Einrichten auf dem XP-Rechner
+The UI is in German for now. Button and menu labels below are quoted as they appear, with a translation.
 
-1. `xpserver.exe` in einen Ordner kopieren, zum Beispiel `C:\xpctl\`.
-2. Doppelklicken.
-3. Der Einrichtungsdialog fragt nach Passwort und erlaubtem Netz (vorausgefüllt mit dem Netz des Rechners). Autostart und Firewall-Freigabe sind schon angehakt. "Einrichten und starten" klicken.
+## Setup on the XP machine
 
-<img src="../docs/img/einrichtung.png" width="480" alt="Einrichtungsdialog">
+1. Copy `xpserver.exe` into a folder, for example `C:\xpctl\`.
+2. Double-click it.
+3. The setup dialog asks for a password and the allowed network (prefilled with the machine's network). Autostart and the firewall rule are already ticked. Click "Einrichten und starten" (set up and start).
 
-Fertig. Beim nächsten Login startet der Server von selbst. Wer lieber von Hand einrichtet: `xpserver.json` und `xpctl.key` neben die Exe legen, dann erscheint kein Dialog.
+<img src="../docs/img/einrichtung.png" width="480" alt="Setup dialog">
 
-Umstieg vom alten Python-Server: auf dem Client `./xpctl.py migrate` (siehe `client/README.md`).
+Done. The server starts by itself at the next login. If you prefer to set it up by hand: put `xpserver.json` and `xpctl.key` next to the exe, then no dialog appears.
 
-## Das Symbol
+Moving from the old Python server: run `./xpctl.py migrate` on the client (see `client/README.md`).
 
-| Farbe | Bedeutung |
+## The tray icon
+
+| Color | Meaning |
 |---|---|
-| grün | bereit |
-| gelb, mit Ring | arbeitet gerade einen Befehl ab |
-| rot | der letzte Befehl ist fehlgeschlagen (8 Sekunden lang) |
-| grau | Verbindungen gesperrt |
+| green | ready |
+| yellow, with ring | working on a command |
+| red | the last command failed (for 8 seconds) |
+| grey | connections locked |
 
-Linksklick öffnet das Live-Fenster: Status, Zahl der Befehle und Fehler, offene Verbindungen, Laufzeit, Aktivität der letzten 30 Minuten und das Protokoll mit Filter (Strg+F) und "Nur Fehler". Esc oder × legt es zurück in den Infobereich.
+Left-click opens the live window: status, number of commands and errors, open connections, uptime, activity over the last 30 minutes and the log with a filter (Ctrl+F) and "Nur Fehler" (errors only). Esc or × puts it back into the tray.
 
-Der Reiter "Spiele" listet die Spiele, die die eingebaute Versionsdatenbank kennt, mit installierter und neuester Version: "Patch da" zuerst, dann "unklar", "aktuell" und "unbekannt" (Desktop-Verknüpfung ohne Datenbank-Eintrag). Die Liste steht nach Bruchteilen einer Sekunde, der md5-Abgleich läuft danach im Hintergrund mit niedrigster Priorität und pausiert, solange ein Programm im Vollbild läuft. Maus über eine Zeile zeigt Exe, Version, neuesten Stand und md5. "Neu prüfen" sucht erneut. Wie gesucht wird, steht in `client/README.md` unter "Spiele-Versionen" (`xpctl gamecheck` zeigt dieselbe Liste).
+The "Spiele" (games) tab lists the games the built-in version database knows, with installed and latest version: "Patch da" (patch available) first, then "unklar" (unclear), "aktuell" (up to date) and "unbekannt" (unknown: desktop shortcut without a database entry). The list is there within a fraction of a second, the md5 check then runs in the background at lowest priority and pauses while a program runs fullscreen. Hovering a row shows exe, version, latest version and md5. "Neu prüfen" (check again) searches again. How the search works is described in `client/README.md` under "Game versions" (`xpctl gamecheck` shows the same list).
 
-![Live-Fenster](../docs/img/live-fenster.png)
+![Live window](../docs/img/live-fenster.png)
 
-Rechtsklick zeigt das Menü:
+Right-click shows the menu:
 
-<img src="../docs/img/menue.png" width="232" alt="Menü am Symbol">
+<img src="../docs/img/menue.png" width="232" alt="Tray icon menu">
 
-- **Verbindungen sperren**: neue Verbindungen werden abgelehnt, laufende Befehle laufen zu Ende. Praktisch, wenn gerade jemand am Rechner sitzt.
-- **Hinweis bei jedem Befehl**: Sprechblase pro Befehl (Standard aus).
-- **Einrichtung**: Autostart an/aus, Firewall-Freigabe, Konfiguration, Log-Datei, Ordner öffnen.
-- **Neu starten**, **Beenden**.
+- **Verbindungen sperren** (lock connections): new connections are refused, running commands finish. Handy when someone is sitting at the machine.
+- **Hinweis bei jedem Befehl** (notify on every command): a balloon tip per command (off by default).
+- **Einrichtung** (setup): autostart on/off, firewall rule, configuration, log file, open folder.
+- **Neu starten** (restart), **Beenden** (quit).
 
-Der Server nimmt sich nie selbst den Fokus und zeigt keine Sprechblasen, solange ein Programm im Vollbild läuft (Spiele).
+The server never steals focus and shows no balloon tips while a program runs fullscreen (games).
 
-## Konfiguration
+## Configuration
 
-`xpserver.json` neben `xpserver.exe` (anderer Ort: `--config` oder `XPCTL_CONFIG`). Vorlage: `xpserver.example.json`. Funktionen, die einen Eintrag brauchen, melden ohne ihn `nicht konfiguriert: ...`.
+`xpserver.json` next to `xpserver.exe` (other location: `--config` or `XPCTL_CONFIG`). Template: `xpserver.example.json`. Features that need an entry report `nicht konfiguriert: ...` (not configured) without it.
 
-| Schlüssel | Bedeutung | Ohne Eintrag |
+| Key | Meaning | Without entry |
 |---|---|---|
-| `allow` | erlaubte Netze (CIDR). Alternativ `--allow` oder `XPCTL_ALLOW` (kommagetrennt) | Einrichtungsdialog beim Start |
-| `rm_roots` | Ordner, in denen `rm` ohne `--force` löschen darf (die Desktops sind immer erlaubt) | `rm` nur mit `--force` |
-| `games_dir` | Ordner mit den Spielen, je Unterordner ein Spiel (für `games`) | Ordner der Exe gilt als Spielordner |
-| `cd_drive` | CD/DVD-Laufwerk, z. B. `E:` | erstes CD-Laufwerk |
-| `image_drive` | virtuelles Alcohol-Laufwerk, z. B. `G:` | `mount`/`unmount` melden "nicht konfiguriert" |
-| `alcohol_axcmd` | Pfad zu `AxCmd.exe` von Alcohol 120% | `mount`/`unmount` melden "nicht konfiguriert" |
-| `launcher_script` | eigenes VBS, das ein Image einhängt und eine Exe startet (Argumente: Image, Ordner, Exe) | `lnk launcher` meldet "nicht konfiguriert" |
-| `launcher_backup_dir` | Ordner, in den `lnk launcher` eine vorhandene Verknüpfung sichert | keine Sicherung |
+| `allow` | allowed networks (CIDR). Alternatively `--allow` or `XPCTL_ALLOW` (comma-separated) | setup dialog on start |
+| `rm_roots` | folders where `rm` may delete without `--force` (the desktops are always allowed) | `rm` only with `--force` |
+| `games_dir` | folder with the games, one subfolder per game (for `games`) | the exe's folder counts as the game folder |
+| `cd_drive` | CD/DVD drive, for example `E:` | first CD drive |
+| `image_drive` | virtual Alcohol drive, for example `G:` | `mount`/`unmount` report "not configured" |
+| `alcohol_axcmd` | path to `AxCmd.exe` from Alcohol 120% | `mount`/`unmount` report "not configured" |
+| `launcher_script` | your own VBS that mounts an image and starts an exe (arguments: image, folder, exe) | `lnk launcher` reports "not configured" |
+| `launcher_backup_dir` | folder where `lnk launcher` backs up an existing shortcut | no backup |
 
-Passwort, in dieser Reihenfolge: `--key-file DATEI`, Umgebungsvariable `XPCTL_KEY`, `xpctl.key` neben der Exe, sonst fragt ein Dialog (mit "Merken").
+Password, in this order: `--key-file FILE`, environment variable `XPCTL_KEY`, `xpctl.key` next to the exe, otherwise a dialog asks (with "Merken", remember).
 
-Weitere Startoptionen: `--port N` (Standard 5050), `--bind ADRESSE` (Standard 0.0.0.0), `--no-watchdog`, `--demo` (zeigt neutrale Werte statt Rechnername, IPs und Pfad, für Screenshots; die Bilder hier sind so entstanden).
+More start options: `--port N` (default 5050), `--bind ADDRESS` (default 0.0.0.0), `--no-watchdog`, `--demo` (shows neutral values instead of machine name, IPs and path, for screenshots; the images here were made that way).
 
-## Dateien neben der Exe
+## Files next to the exe
 
-| Datei | Inhalt |
+| File | Contents |
 |---|---|
-| `xpserver.json` | Konfiguration |
-| `xpctl.key` | Passwort (Klartext, nur für diesen Rechner) |
-| `xpserver.log` | Protokoll aller Befehle (UTF-8, wächst; darf jederzeit gelöscht werden) |
-| `xpserver.exe.bak` | nur kurz während eines Updates |
+| `xpserver.json` | configuration |
+| `xpctl.key` | password (plain text, only for this machine) |
+| `xpserver.log` | log of all commands (UTF-8, grows; can be deleted at any time) |
+| `xpserver-md5.tsv` | md5 cache for the game check (can be deleted, gets rebuilt) |
+| `xpserver.exe.bak` | only briefly during an update |
 
-## Update, Absturz, Neustart
+## Update, crash, restart
 
-- **Update** (`xpctl.py update` vom Client): Der Server prüft Prüfsumme und dass es eine `xpserver.exe` ist, benennt die laufende Exe in `.bak` um, legt die neue hin und startet sie. Erst wenn die neue lauscht, beendet sich die alte. Kommt die neue nicht innerhalb von 30 Sekunden hoch, wird sie beendet, die alte Exe zurückgelegt und die alte Version lauscht weiter.
-- **Absturz**: Neben dem Server läuft ein zweiter, unsichtbarer `xpserver.exe`-Prozess als Wächter. Endet der Server unerwartet, startet der Wächter ihn neu (höchstens dreimal hintereinander, danach Schluss, siehe Log).
-- Sockets werden nicht an Kindprozesse vererbt, ein per `run --detach` gestartetes Programm hält den Port also nicht fest.
+- **Update** (`xpctl.py update` from the client): the server checks the checksum and that the file is an `xpserver.exe`, renames the running exe to `.bak`, puts the new one in place and starts it. Only once the new one is listening does the old one exit. If the new one does not come up within 30 seconds, it is stopped, the old exe is put back and the old version keeps listening.
+- **Crash**: a second, invisible `xpserver.exe` process runs next to the server as a watchdog. If the server exits unexpectedly, the watchdog restarts it (at most three times in a row, then it gives up, see the log).
+- Sockets are not inherited by child processes, so a program started with `run --detach` does not hold on to the port.
 
-## Sicherheit
+## Security
 
-- Der Verkehr ist **nicht verschlüsselt**. Nur im vertrauenswürdigen LAN betreiben, nie ins Internet.
-- Der Server führt auf Anforderung **beliebige Befehle** aus und liest und schreibt Dateien. Wer das Passwort kennt und im erlaubten Netz sitzt, hat volle Kontrolle über den Rechner.
-- Anmeldung per HMAC-SHA256 mit Challenge in beide Richtungen, das Passwort geht nicht über die Leitung.
-- Ohne erlaubtes Netz startet der Server nicht.
+- Traffic is **not encrypted**. Only run it in a trusted LAN, never on the internet.
+- On request the server runs **arbitrary commands** and reads and writes files. Anyone who knows the password and sits in an allowed network has full control over the machine.
+- Login via HMAC-SHA256 with a challenge in both directions, the password never goes over the wire.
+- Without an allowed network the server does not start.
 
-## Selbst bauen
+## Building it yourself
 
-Braucht nur das [dotnet SDK](https://dotnet.microsoft.com/download) (6 oder neuer). Baut auf macOS, Linux und Windows, die Referenz-Assemblies für .NET 3.5 kommen per NuGet.
+Needs only the [dotnet SDK](https://dotnet.microsoft.com/download) (6 or newer). Builds on macOS, Linux and Windows, the reference assemblies for .NET 3.5 come from NuGet.
 
     cd server
     ./build.sh            # -> server/dist/xpserver.exe (+ LIESMICH.txt, xpserver.example.json)
 
-Ohne Skript: `dotnet build -c Release`, Ergebnis in `bin/Release/net35/xpserver.exe`.
+Without the script: `dotnet build -c Release`, result in `bin/Release/net35/xpserver.exe`.
 
-## Aufbau
+## Layout
 
-| Ordner | Inhalt |
+| Folder | Contents |
 |---|---|
-| `Core/` | Start und Optionen (`Program.cs`), Protokoll, Anmeldung und Verteilung (`Net.cs`), JSON (`Json.cs`), Registry wie Pythons `winreg` (`Reg.cs`), Kindprozesse ohne Konsolenfenster (`Proc.cs`), Konfiguration, Log, Wächter und Update (`Supervisor.cs`) |
-| `Ops/` | die Befehle, eine Datei je Gruppe: `Core.cs` (ping, run, put, get, update), `Ui.cs`, `Inventory.cs`, `Shell.cs`, `Drives.cs`, `Files.cs` |
-| `Ui/` | Symbol, Menü, Live-Fenster, Dialoge, Ersteinrichtung |
-| `tests/` | `parity.py` und Testfälle |
-| `legacy-python/` | der alte Python-Server (Referenz für den Port, wird nicht mehr weiterentwickelt) |
+| `Core/` | startup and options (`Program.cs`), protocol, login and dispatch (`Net.cs`), JSON (`Json.cs`), registry access modeled on Python's `winreg` (`Reg.cs`), child processes without a console window (`Proc.cs`), configuration, log, watchdog and update (`Supervisor.cs`) |
+| `Ops/` | the commands, one file per group: `Core.cs` (ping, run, put, get, update), `Ui.cs`, `Inventory.cs`, `Shell.cs`, `Drives.cs`, `Files.cs` |
+| `Ui/` | tray icon, menu, live window, dialogs, first-run setup |
+| `tests/` | `parity.py` and test cases |
+| `legacy-python/` | the old Python server (reference for the port, no longer developed) |
 
-Ein neuer Befehl ist eine statische Methode mit Attribut, sie wird beim Start per Reflection gefunden:
+A new command is a static method with an attribute, it is found via reflection at startup:
 
 ```csharp
-[Op("hallo")]
-static J Hallo(Conn c, Req r)
+[Op("hello")]
+static J Hello(Conn c, Req r)
 {
-    return J.Ok("text", "Hallo " + r.Str("name", "Welt"));
+    return J.Ok("text", "Hello " + r.Str("name", "World"));
 }
 ```
 
-Regeln für .NET 3.5 und für das Antwortformat stehen in `PORTING.md`.
+Rules for .NET 3.5 and for the response format are in [`PORTING.md`](PORTING.md).
 
-### Temperaturquellen
+### Temperature sources
 
-`temps` fragt alle Quellen aus `Ops/Temps.cs` ab. Eingebaut sind:
+`temps` queries all sources from `Ops/Temps.cs`. Built in:
 
-| Quelle | Liefert | Braucht |
+| Source | Delivers | Needs |
 |---|---|---|
-| `acpi` | Thermalzone des Mainboards mit Drossel- und Abschaltgrenze | ACPI-BIOS mit Thermalzone |
-| `smart` | Temperatur jeder Festplatte und SSD (SMART 194/190) | IDE/SATA-Laufwerke, Adminrechte |
-| `nvidia` | GPU-Temperatur | NVIDIA-Treiber mit `nvapi.dll` (ab etwa 2007) |
-| `hwinfo` | alle Temperaturen, die HWiNFO kennt (CPU-Kerne, Chipsatz, GPU, Laufwerke) mit Namen | laufendes HWiNFO mit "Shared Memory Support" |
-| `speedfan` | Temperaturen von SpeedFan, nur nummeriert | laufendes SpeedFan |
+| `acpi` | mainboard thermal zone with throttle and shutdown limits | ACPI BIOS with a thermal zone |
+| `smart` | temperature of every hard disk and SSD (SMART 194/190) | IDE/SATA drives, admin rights |
+| `nvidia` | GPU temperature | NVIDIA driver with `nvapi.dll` (from about 2007) |
+| `hwinfo` | every temperature HWiNFO knows (CPU cores, chipset, GPU, drives) with names | HWiNFO running with "Shared Memory Support" |
+| `speedfan` | temperatures from SpeedFan, numbered only | SpeedFan running |
 
-Fehlt eine Quelle, steht der Grund unter `sources` in der Antwort und die anderen liefern trotzdem. Eine neue Quelle ist eine Klasse:
+If a source is missing, the reason is listed under `sources` in the response and the others still deliver. A new source is a class:
 
 ```csharp
-public class MeineQuelle : TempSource
+public class MySource : TempSource
 {
-    public override string Name { get { return "meine"; } }
+    public override string Name { get { return "mine"; } }
     public override void Read(List<J> into)
     {
-        // nicht vorhanden: throw new Unavailable("Grund");
-        into.Add(Temps.Sensor(Name, "Sensorname", "cpu", 42.0));
+        // not available: throw new Unavailable("reason");
+        into.Add(Temps.Sensor(Name, "Sensor name", "cpu", 42.0));
     }
 }
 ```
 
-plus ein Eintrag in `Temps.Sources`. Im Client die Liste `TEMP_SOURCES` ergänzen (nur für die Hilfe).
+plus an entry in `Temps.Sources`. In the client, add it to the `TEMP_SOURCES` list (only used for the help text).
 
 ## Tests
 
-`tests/parity.py` schickt dieselben Anfragen an zwei Server und vergleicht die JSON-Antworten feldgenau. So wurde der Port gegen den alten Python-Server geprüft (alter Server auf 5050, neuer auf einem Testport):
+`tests/parity.py` sends the same requests to two servers and compares the JSON responses field by field. That is how the port was checked against the old Python server (old server on 5050, new one on a test port):
 
     tests/parity.py --host 192.168.1.50 --a 5050 --b 5051 tests/cases/*.jsonl
 
-Die Fälle sind JSON-Zeilen, `_ignore` blendet Felder aus, die sich zwischen zwei Aufrufen ändern dürfen (freier Speicher, Zeit).
+The cases are JSON lines, `_ignore` hides fields that may change between two calls (free memory, time).
 
-Das Protokoll ist in `../docs/protokoll.md` beschrieben.
+The protocol is described in [`../docs/protocol.md`](../docs/protocol.md).
