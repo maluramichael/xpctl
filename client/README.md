@@ -139,7 +139,7 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
     ./xpctl.py saves nfsu repair Spieler              # falsche Prüfsummen neu rechnen
     ./xpctl.py saves nfsu backup [Spieler]            # Profile unverändert sichern
     ./xpctl.py saves d2 show Held                     # Diablo II: Klasse, Level, Werte, Gold, Schwierigkeit
-    ./xpctl.py saves d2 set Held strength=50 goldbank=100000
+    ./xpctl.py saves d2 set Held strength=50 goldbank=100000 [--force]   # --force: Spiel steht im Hauptmenü
 
 Unterstützt:
 

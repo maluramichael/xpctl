@@ -254,15 +254,17 @@ class Game(ABC):
 
     # --- gemeinsam
 
-    def store(self, profile: Profile, backup_root: str) -> tuple[str, list[str]]:
-        """Schreibt geänderte Dateien. Vorher: Version geprüft, Spiel läuft nicht, Sicherung angelegt.
-        Danach wird jede Datei zurückgelesen und verglichen. Gibt (Sicherungsordner, Pfade) zurück."""
+    def store(self, profile: Profile, backup_root: str, ignore_running: bool = False) -> tuple[str, list[str]]:
+        """Schreibt geänderte Dateien. Vorher: Version geprüft, Spiel läuft nicht (außer
+        ``ignore_running``, z. B. Spiel steht im Hauptmenü), Sicherung angelegt. Danach wird jede Datei
+        zurückgelesen und verglichen. Gibt (Sicherungsordner, Pfade) zurück."""
         if not self.writable:
             raise SaveError(f"{self.title}: {self.version_text}. Schreiben nur für geprüfte Versionen.")
-        for proc in self.processes or (self.exe,):
+        for proc in () if ignore_running else (self.processes or (self.exe,)):
             if self.remote.running(proc):
                 raise SaveError(f"{proc} läuft. Erst das Spiel beenden, es überschreibt die Dateien sonst "
-                                f"(heißt ein anderes Programm genauso, ebenfalls beenden).")
+                                f"(heißt ein anderes Programm genauso, ebenfalls beenden). Steht das Spiel "
+                                f"nur im Hauptmenü und das Profil ist nicht geladen: --force.")
         changed = profile.dirty()
         if not changed:
             return "", []

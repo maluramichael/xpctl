@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from savegames import SaveError, find_game, resolve  # noqa: E402
-from savegames.diablo2 import D2s, DiabloII, DiabloII_114d  # noqa: E402
+from savegames.diablo2 import D2s, DiabloII, DiabloII_114d, resolve_save_path  # noqa: E402
 from test_savegames import FakeRemote  # noqa: E402
 
 D2_MD5 = "2b3600c10ee0d6387675a2f6cf0ebed2"
@@ -146,6 +146,11 @@ class NewSaveRemote(D2Remote):
 
 
 class D2GameTest(unittest.TestCase):
+    def test_resolve_save_path(self):
+        self.assertEqual(resolve_save_path("\\Diablo II\\Save\\", r"E:\Games\D2"), r"E:\Diablo II\Save")
+        self.assertEqual(resolve_save_path(r"D:\Saves\D2\\", r"C:\Games\D2"), r"D:\Saves\D2")
+        self.assertEqual(resolve_save_path("save", r"C:\Games\D2"), r"C:\Games\D2\save")
+
     def test_114d_uses_newsavepath_not_old_folder(self):
         fs = files()
         fs[r"C:\Diablo II\Save\Neu.d2s"] = d2s(name=b"Neu")
@@ -181,6 +186,8 @@ class D2GameTest(unittest.TestCase):
         with self.assertRaises(SaveError):
             g.store(p, r"C:\xpctl\backup\saves")
         self.assertEqual(r.writes, [])
+        g.store(p, r"C:\xpctl\backup\saves", ignore_running=True)     # --force
+        self.assertIn(SAVE + r"\Testheld.d2s", r.writes)
 
     def test_store_writes_and_backs_up(self):
         r = D2Remote(files())

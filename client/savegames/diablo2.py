@@ -1,9 +1,9 @@
 """Diablo II / Lord of Destruction (PC), Charakterdateien ``<Name>.d2s``.
 
 Ordner bis 1.13: Registry ``Save Path`` (HKCU, sonst HKLM) unter
-``Software\\Blizzard Entertainment\\Diablo II``, sonst ``<Installation>\\save``. Ab 1.14 gilt
-``NewSavePath`` (``\\Diablo II\\Save\\``): unter XP ohne "Saved Games"-Ordner landet das im
-Wurzelverzeichnis des Laufwerks (gesehen: ``C:\\Diablo II\\Save``). Unterordner wie ``Europe``
+``Software\\Blizzard Entertainment\\Diablo II``, sonst ``<Installation>\\save``. Ab 1.14 gilt der
+Registry-Wert ``NewSavePath`` (``resolve_save_path``; gesehen: ``\\Diablo II\\Save\\`` ergibt
+``C:\\Diablo II\\Save``). Unterordner wie ``Europe``
 gehören zu Battle.net-Charakteren (nur Tastenbelegung und Karte, der Charakter liegt auf dem
 Server) und werden nie angefasst. Zu jedem Charakter gehören weitere ``<Name>.*``-Dateien (``.key``
 Tastenbelegung, ``.ma*``/``.map`` Kartenstand); sie werden gesichert, aber nicht gedeutet.
@@ -293,6 +293,17 @@ class DiabloII(Game):
         return Profile(d2s[0][:-4], files)
 
 
+def resolve_save_path(value: str, install_dir: str) -> str:
+    """NewSavePath wie in der Registry: ``D:\\x`` absolut, ``\\x`` auf dem Laufwerk der
+    Installation, sonst relativ zum Installationsordner. Nur der Fall ``\\x`` ist am Rechner gesehen."""
+    v = value.strip().rstrip("\\")
+    if len(v) >= 2 and v[1] == ":":
+        return v
+    if v.startswith("\\"):
+        return install_dir[:2] + v
+    return join(install_dir, v)
+
+
 class DiabloII_114d(DiabloII):
     """Lord of Destruction 1.14d, Game.exe 1.14.3.71 (3.618.792 Byte, 31.05.2016).
     Speichert in ``NewSavePath`` statt ``Save Path`` (siehe Moduldoku)."""
@@ -300,14 +311,13 @@ class DiabloII_114d(DiabloII):
     version = "1.14d (Game.exe 1.14.3.71)"
     exe_md5 = frozenset({"2b3600c10ee0d6387675a2f6cf0ebed2"})
     notes = DiabloII.notes + [
-        "Ab 1.14 liegen die Charaktere im Ordner aus NewSavePath (unter XP z. B. C:\\Diablo II\\Save). "
+        "Ab 1.14 liegen die Charaktere im Ordner aus dem Registry-Wert NewSavePath. "
         "Dateien im alten Save Path sind Altbestand von vor dem Patch und werden hier nicht gezeigt.",
     ]
 
     def save_dir(self) -> str:
         for hive in ("HKCU", "HKLM"):
-            rel = self.remote.reg(f"{hive}\\{self.KEY}", "NewSavePath")
-            if rel:
-                drive = (self.install_dir or "C:")[:2]
-                return drive + "\\" + rel.strip("\\")
+            p = self.remote.reg(f"{hive}\\{self.KEY}", "NewSavePath")
+            if p:
+                return resolve_save_path(p, self.install_dir or "C:")
         return super().save_dir()

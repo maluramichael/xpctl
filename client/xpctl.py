@@ -808,7 +808,7 @@ def cmd_saves(sock, args):
         if args.dry_run:
             print("--dry-run: nichts geschrieben (" + ", ".join(f.name for f in p.dirty()) + ")")
             return 0
-        bdir, written = g.store(p, SAVES_BACKUP)
+        bdir, written = g.store(p, SAVES_BACKUP, ignore_running=args.force)
         if not written:
             print("keine Änderung")
             return 0
@@ -1963,6 +1963,8 @@ def main() -> int:
     p.add_argument("assign", nargs="*", metavar="FELD=WERT")
     p.add_argument("--json", action="store_true")
     p.add_argument("--dry-run", action="store_true", help="nur zeigen, was sich ändern würde")
+    p.add_argument("--force", action="store_true",
+                   help="auch schreiben, wenn das Spiel läuft (nur im Hauptmenü, Profil nicht geladen)")
     p.set_defaults(fn=cmd_saves)
 
     p = sub.add_parser("reg", help="Registry-Schlüssel lesen (nur lesen)")
