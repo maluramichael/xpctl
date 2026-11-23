@@ -209,12 +209,14 @@ class NfsUnderground(Game):
     id = "nfsu"
     title = "Need for Speed: Underground"
     exe = "Speed.exe"
+    force_ok = False
+    force_refusal = ("das Spiel schreibt .cfg, .opt und Profiles.usr beim Profilwechsel und beim Beenden "
+                     "aus dem Speicher neu und überschreibt die Änderung (gesehen 2026-11-23).")
     notes = [
         "Ein Absturz beim Laden eines Profils lag einmal an einer Grafikeinstellung in der .cfg "
         "(Verdacht auf einer GeForce 7800 GTX: RES 3, ENVMAP 3 oder MOTIONBLUR 1; LIGHTSTREAKS 1 "
         "ist ausgeschlossen). Test: die Werte eines frischen Profils übernehmen.",
-        "Nicht mit --force schreiben: das Spiel schreibt .cfg, .opt und Profiles.usr beim Profilwechsel "
-        "und beim Beenden aus dem Speicher neu und überschreibt die Änderung. Erst Speed.exe beenden.",
+        "Schreiben nur bei beendetem Spiel, --force wird abgelehnt (das Spiel überschreibt die Dateien selbst).",
     ]
 
     @classmethod

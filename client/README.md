@@ -153,7 +153,7 @@ Schreiben ist abgesichert:
 - vorher kommen die alten Dateien nach `C:\xpctl\backup\saves\<spiel>\<Zeitstempel>`. Eine vorhandene Sicherung wird nie überschrieben.
 - danach wird jede Datei zurückgelesen und Byte für Byte verglichen.
 
-Im Spiel geprüft: NFSU lädt eine von `set` geänderte `.cfg` (Lichtschlieren an). Dabei muss `Speed.exe` beendet sein, `--force` hilft hier nicht, weil das Spiel die Dateien beim Profilwechsel selbst neu schreibt. Dass NFSU eine von `repair` reparierte `.opt` oder `.ugd` lädt, ist noch nicht geprüft.
+Im Spiel geprüft: NFSU lädt eine von `set` geänderte `.cfg` (Lichtschlieren an). Dabei muss `Speed.exe` beendet sein: das Spiel schreibt die Dateien beim Profilwechsel selbst neu, deshalb lehnt `saves` bei NFSU `--force` ab. Ob `--force` erlaubt ist, legt jede Spielklasse fest (`force_ok`, Begründung in `force_refusal`). Dass NFSU eine von `repair` reparierte `.opt` oder `.ugd` lädt, ist noch nicht geprüft.
 
 **Neues Spiel oder neue Version.** Der Code liegt in `client/savegames/`:
 

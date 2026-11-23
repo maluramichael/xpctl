@@ -1964,7 +1964,8 @@ def main() -> int:
     p.add_argument("--json", action="store_true")
     p.add_argument("--dry-run", action="store_true", help="nur zeigen, was sich ändern würde")
     p.add_argument("--force", action="store_true",
-                   help="auch schreiben, wenn das Spiel läuft (nur im Hauptmenü, Profil nicht geladen)")
+                   help="auch schreiben, wenn das Spiel läuft (Hauptmenü, Profil nicht geladen); "
+                        "Spiele, die ihre Dateien selbst neu schreiben (NFSU), lehnen das ab")
     p.set_defaults(fn=cmd_saves)
 
     p = sub.add_parser("reg", help="Registry-Schlüssel lesen (nur lesen)")

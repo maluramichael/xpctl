@@ -260,6 +260,7 @@ class DiabloII(Game):
     title = "Diablo II"
     exe = "Game.exe"
     processes = ("Game.exe", "Diablo II.exe")
+    force_ok = True     # im Hauptmenü ist kein Charakter offen (geprüft 2026-11-23 mit 1.14d)
     notes = ["Game.exe heißen auch andere Spiele (z. B. Driver, Mafia, Nox): läuft eins davon, "
              "verweigert saves das Schreiben vorsichtshalber ebenfalls."]
     KEY = r"Software\Blizzard Entertainment\Diablo II"

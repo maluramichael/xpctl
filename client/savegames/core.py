@@ -200,6 +200,10 @@ class Game(ABC):
     title = ""
     exe = ""                     # Exe-Name im Installationsordner (für die md5)
     processes: tuple[str, ...] = ()  # Prozesse, die beim Schreiben nicht laufen dürfen (Standard: exe)
+    # Darf trotz laufendem Spiel geschrieben werden (--force)? Nur, wenn das Spiel die Dateien im
+    # Menü nicht selbst neu schreibt. Sonst ein Satz, warum nicht.
+    force_ok = True
+    force_refusal = ""
     version = ""                 # lesbare Version, nur bei Versionsklassen
     exe_md5: frozenset[str] = frozenset()
     notes: list[str] = []
@@ -260,8 +264,13 @@ class Game(ABC):
         zurückgelesen und verglichen. Gibt (Sicherungsordner, Pfade) zurück."""
         if not self.writable:
             raise SaveError(f"{self.title}: {self.version_text}. Schreiben nur für geprüfte Versionen.")
-        for proc in () if ignore_running else (self.processes or (self.exe,)):
-            if self.remote.running(proc):
+        for proc in self.processes or (self.exe,):
+            if not self.remote.running(proc):
+                continue
+            if ignore_running and not self.force_ok:
+                raise SaveError(f"{proc} läuft, und bei {self.title} hilft --force nicht: {self.force_refusal} "
+                                f"Erst das Spiel ganz beenden.")
+            if not ignore_running:
                 raise SaveError(f"{proc} läuft. Erst das Spiel beenden, es überschreibt die Dateien sonst "
                                 f"(heißt ein anderes Programm genauso, ebenfalls beenden). Steht das Spiel "
                                 f"nur im Hauptmenü und das Profil ist nicht geladen: --force.")

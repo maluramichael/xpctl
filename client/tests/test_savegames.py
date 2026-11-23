@@ -241,6 +241,9 @@ class GameTest(unittest.TestCase):
         p.set("RES", "4")
         with self.assertRaises(SaveError):
             g.store(p, r"C:\xpctl\backup\saves")
+        with self.assertRaises(SaveError) as e:                          # --force hilft bei NFSU nicht
+            g.store(p, r"C:\xpctl\backup\saves", ignore_running=True)
+        self.assertIn("hilft --force nicht", str(e.exception))
         self.assertEqual(r.writes, [])
 
     def test_not_installed(self):
