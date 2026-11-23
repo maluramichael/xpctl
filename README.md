@@ -11,7 +11,7 @@ Remote control for Windows XP machines from your terminal. Built for retro PCs: 
 |---|---|
 | ![xpserver live window](docs/img/live-fenster.png) | ![xpserver games tab](docs/img/spiele.png) |
 
-The games tab checks every game the built-in version database knows (found via the GOG registry, registry hints and desktop shortcuts), matches it by file size first and confirms with an MD5 in the background. A second run takes about 0.3 s on a Pentium-era XP box. Same list in the terminal: `./xpctl.py gamecheck`.
+The games tab checks every game the built-in version database knows (found via the GOG registry, registry hints and desktop shortcuts), matches it by file size first and confirms with an MD5 in the background. On the XP test machine (156 executables) the first run takes 2 s, every further run about 0.3 s. Same list in the terminal: `./xpctl.py gamecheck`.
 
 Note: the program itself speaks German for now. The tray UI, CLI help, command output and the screenshots are in German, the docs are in English.
 

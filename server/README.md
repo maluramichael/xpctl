@@ -29,6 +29,8 @@ Left-click opens the live window: status, number of commands and errors, open co
 
 The "Spiele" (games) tab lists the games the built-in version database knows, with installed and latest version: "Patch da" (patch available) first, then "unklar" (unclear), "aktuell" (up to date) and "unbekannt" (unknown: desktop shortcut without a database entry). The list is there within a fraction of a second, the md5 check then runs in the background at lowest priority and pauses while a program runs fullscreen. Hovering a row shows exe, version, latest version and md5. "Neu prüfen" (check again) searches again. How the search works is described in `client/README.md` under "Game versions" (`xpctl gamecheck` shows the same list).
 
+![Games tab](../docs/img/spiele.png)
+
 ![Live window](../docs/img/live-fenster.png)
 
 Right-click shows the menu:
