@@ -35,7 +35,7 @@ import threading
 import zlib
 import time
 
-VERSION = 14
+VERSION = 15
 RESTART_CODE = 42
 MAX_FRAME = 16 * 1024 * 1024
 CHUNK = 256 * 1024
@@ -1827,8 +1827,9 @@ def all_links():
     """{Name ohne .lnk: Pfad} auf beiden Desktops und in den Gruppenordnern des All-Users-Desktops."""
     au, me = desk_dirs()
     out = {}
-    dirs = [au, me] + [os.path.join(au, d) for d in sorted(os.listdir(au))
-                       if os.path.isdir(os.path.join(au, d))]
+    # Gruppenordner zuerst, Desktops zuletzt: liegt ein Name doppelt vor (Installer legt neu an), gewinnt der
+    # Desktop-Eintrag, und desk group ersetzt damit den alten im Gruppenordner.
+    dirs = [os.path.join(au, d) for d in sorted(os.listdir(au)) if os.path.isdir(os.path.join(au, d))] + [au, me]
     for d in dirs:
         for f in sorted(os.listdir(d)):
             if f.lower().endswith(".lnk"):
