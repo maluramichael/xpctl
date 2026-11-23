@@ -138,7 +138,23 @@ class D2sFormatTest(unittest.TestCase):
             D2s("x.d2s", bytes(800))
 
 
+class NewSaveRemote(D2Remote):
+    def reg(self, key, name):
+        if name == "NewSavePath":
+            return "\\Diablo II\\Save\\"
+        return super().reg(key, name)
+
+
 class D2GameTest(unittest.TestCase):
+    def test_114d_uses_newsavepath_not_old_folder(self):
+        fs = files()
+        fs[r"C:\Diablo II\Save\Neu.d2s"] = d2s(name=b"Neu")
+        fs[r"C:\Diablo II\Save\Europe\Neu.key"] = b"battle.net"
+        g = resolve(NewSaveRemote(fs), DiabloII)
+        self.assertEqual(g.save_dir(), r"C:\Diablo II\Save")
+        self.assertEqual(g.profiles(), ["Neu"])                 # alter Ordner und Europe bleiben außen vor
+        self.assertEqual([f.name for f in g.load("Neu").files], ["Neu.d2s"])
+
     def test_resolve_profiles_load(self):
         g = resolve(D2Remote(files()), find_game("d2"))
         self.assertIsInstance(g, DiabloII_114d)

@@ -1,7 +1,11 @@
 """Diablo II / Lord of Destruction (PC), Charakterdateien ``<Name>.d2s``.
 
-Ordner: Registry ``Save Path`` (HKCU, sonst HKLM) unter ``Software\\Blizzard Entertainment\\Diablo II``,
-sonst ``<Installation>\\save``. Zu jedem Charakter gehören weitere ``<Name>.*``-Dateien (``.key``
+Ordner bis 1.13: Registry ``Save Path`` (HKCU, sonst HKLM) unter
+``Software\\Blizzard Entertainment\\Diablo II``, sonst ``<Installation>\\save``. Ab 1.14 gilt
+``NewSavePath`` (``\\Diablo II\\Save\\``): unter XP ohne "Saved Games"-Ordner landet das im
+Wurzelverzeichnis des Laufwerks (gesehen: ``C:\\Diablo II\\Save``). Unterordner wie ``Europe``
+gehören zu Battle.net-Charakteren (nur Tastenbelegung und Karte, der Charakter liegt auf dem
+Server) und werden nie angefasst. Zu jedem Charakter gehören weitere ``<Name>.*``-Dateien (``.key``
 Tastenbelegung, ``.ma*``/``.map`` Kartenstand); sie werden gesichert, aber nicht gedeutet.
 
 Aufbau von ``.d2s`` (Version 0x60 = Patch 1.10 bis 1.14d):
@@ -290,7 +294,20 @@ class DiabloII(Game):
 
 
 class DiabloII_114d(DiabloII):
-    """Lord of Destruction 1.14d, Game.exe 1.14.3.71 (3.618.792 Byte, 31.05.2016)."""
+    """Lord of Destruction 1.14d, Game.exe 1.14.3.71 (3.618.792 Byte, 31.05.2016).
+    Speichert in ``NewSavePath`` statt ``Save Path`` (siehe Moduldoku)."""
 
     version = "1.14d (Game.exe 1.14.3.71)"
     exe_md5 = frozenset({"2b3600c10ee0d6387675a2f6cf0ebed2"})
+    notes = DiabloII.notes + [
+        "Ab 1.14 liegen die Charaktere im Ordner aus NewSavePath (unter XP z. B. C:\\Diablo II\\Save). "
+        "Dateien im alten Save Path sind Altbestand von vor dem Patch und werden hier nicht gezeigt.",
+    ]
+
+    def save_dir(self) -> str:
+        for hive in ("HKCU", "HKLM"):
+            rel = self.remote.reg(f"{hive}\\{self.KEY}", "NewSavePath")
+            if rel:
+                drive = (self.install_dir or "C:")[:2]
+                return drive + "\\" + rel.strip("\\")
+        return super().save_dir()

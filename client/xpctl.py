@@ -765,7 +765,7 @@ def cmd_saves(sock, args):
                 probs = p.problems()
                 state = "ok" if not probs else f"{len(probs)} Problem(e)"
                 print(f"  {n:<16} {', '.join(f.name for f in p.files)}  [{state}]")
-            for note in fam.notes:
+            for note in g.notes:
                 print(f"\n  Hinweis: {note}")
             return 0
         if action == "backup":
