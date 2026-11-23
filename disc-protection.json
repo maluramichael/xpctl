@@ -357,6 +357,20 @@
    "image": "MDF/MDS",
    "notes": "CD 2 bis 4 sind die Kampagnen-Discs der Häuser",
    "verified": true
+  },
+  {
+   "game": "Future Cop: L.A.P.D.",
+   "year": 1998,
+   "disc": [
+    "CD"
+   ],
+   "label": "FCOP_CD",
+   "lang": "en",
+   "protection": "keiner",
+   "evidence": "keine Schutzdateien, FCopLAPD.exe nur Standard-Sektionen (plus UVA_DATA)",
+   "image": "ISO",
+   "notes": "Start braucht die CD (Image mounten)",
+   "verified": true
   }
  ]
 }
