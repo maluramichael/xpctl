@@ -6,4 +6,4 @@ hier importieren. Details in client/README.md, Abschnitt "Spielstände".
 """
 from .core import (Entry, Field, Game, OpaqueFile, Profile, Remote, SaveError, SaveFile,  # noqa: F401
                    adler32, find_game, games, join, resolve, versions)
-from . import nfsu  # noqa: F401  (registriert die Klassen)
+from . import diablo2, nfsu  # noqa: F401  (registriert die Klassen)

@@ -138,8 +138,13 @@ unter `games` in `game-versions.json` eintragen. Die Datenbank ist von Hand rech
     ./xpctl.py saves nfsu set Spieler MOTIONBLUR=0 RES=4 [--dry-run]
     ./xpctl.py saves nfsu repair Spieler              # falsche Prüfsummen neu rechnen
     ./xpctl.py saves nfsu backup [Spieler]            # Profile unverändert sichern
+    ./xpctl.py saves d2 show Held                     # Diablo II: Klasse, Level, Werte, Gold, Schwierigkeit
+    ./xpctl.py saves d2 set Held strength=50 goldbank=100000
 
-Unterstützt: Need for Speed: Underground (`nfsu`). Grafik und Ton (`.cfg`) lesen und schreiben, Prüfsummen (Adler-32) von Optionen (`.opt`) und Karriere (`.ugd`) prüfen und reparieren, Profilliste (`Profiles.usr`). Das Online-Profil (`.pro`, enthält Zugangsdaten) wird nie angezeigt. Feldnamen dürfen kurz sein (`RES`), solange sie eindeutig sind, sonst mit Datei davor (`opt.checksum`).
+Unterstützt:
+
+- Diablo II / Lord of Destruction 1.14d (`d2`): Charakter (`.d2s`) mit Klasse, Level, Status, Schwierigkeit, Attributen, Leben/Mana, Erfahrung und Gold. Schreibbar sind Attribute, freie Punkte und Gold, aber nur Werte, die schon in der Datei stehen (ein Wert 0 fehlt dort und müsste eingefügt werden). Level und Erfahrung bleiben nur lesbar. Die Prüfsumme wird beim Schreiben neu gerechnet.
+- Need for Speed: Underground (`nfsu`): Grafik und Ton (`.cfg`) lesen und schreiben, Prüfsummen (Adler-32) von Optionen (`.opt`) und Karriere (`.ugd`) prüfen und reparieren, Profilliste (`Profiles.usr`). Das Online-Profil (`.pro`, enthält Zugangsdaten) wird nie angezeigt. Feldnamen dürfen kurz sein (`RES`), solange sie eindeutig sind, sonst mit Datei davor (`opt.checksum`).
 
 Schreiben ist abgesichert:
 

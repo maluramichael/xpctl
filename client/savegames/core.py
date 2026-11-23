@@ -137,7 +137,7 @@ class OpaqueFile(SaveFile):
     """Datei, deren Inhalt das Format nicht deutet; wird nur durchgereicht."""
 
     kind = "roh"
-    label = "unbekannt"
+    label = "nicht gedeutet, wird mitgesichert"
 
     def parse(self, data: bytes) -> None:
         self.data = data
@@ -198,7 +198,8 @@ class Game(ABC):
 
     id = ""                      # Kurzname für die Kommandozeile, z. B. "nfsu"
     title = ""
-    exe = ""                     # Exe-Name im Installationsordner
+    exe = ""                     # Exe-Name im Installationsordner (für die md5)
+    processes: tuple[str, ...] = ()  # Prozesse, die beim Schreiben nicht laufen dürfen (Standard: exe)
     version = ""                 # lesbare Version, nur bei Versionsklassen
     exe_md5: frozenset[str] = frozenset()
     notes: list[str] = []
@@ -258,8 +259,10 @@ class Game(ABC):
         Danach wird jede Datei zurückgelesen und verglichen. Gibt (Sicherungsordner, Pfade) zurück."""
         if not self.writable:
             raise SaveError(f"{self.title}: {self.version_text}. Schreiben nur für geprüfte Versionen.")
-        if self.remote.running(self.exe):
-            raise SaveError(f"{self.exe} läuft. Erst das Spiel beenden, es überschreibt die Dateien sonst.")
+        for proc in self.processes or (self.exe,):
+            if self.remote.running(proc):
+                raise SaveError(f"{proc} läuft. Erst das Spiel beenden, es überschreibt die Dateien sonst "
+                                f"(heißt ein anderes Programm genauso, ebenfalls beenden).")
         changed = profile.dirty()
         if not changed:
             return "", []

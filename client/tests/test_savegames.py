@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from savegames import Entry, Remote, SaveError, find_game, games, resolve, versions  # noqa: E402
+from savegames.diablo2 import D2s, encode_stats  # noqa: E402
 from savegames.nfsu import (NfsuCfg, NfsuOpt, NfsuProfiles, NfsuUgd,  # noqa: E402
                             NfsUnderground, NfsUnderground_20040115)
 
@@ -259,13 +260,17 @@ class RealFilesTest(unittest.TestCase):
         for p in sorted(d.iterdir()):
             low = p.name.lower()
             cls = (NfsuProfiles if low == "profiles.usr" else NfsuCfg if low.endswith(".cfg")
-                   else NfsuOpt if low.endswith(".opt") else NfsuUgd if low.endswith(".ugd") else None)
+                   else NfsuOpt if low.endswith(".opt") else NfsuUgd if low.endswith(".ugd")
+                   else D2s if low.endswith(".d2s") else None)
             if cls is None:
                 continue
             raw = p.read_bytes()
             f = cls(str(p), raw)
             self.assertEqual(f.serialize(), raw, p.name)
             self.assertEqual(f.problems(), [], p.name)
+            if cls is D2s:
+                self.assertIsNotNone(f.stats, f.stats_error)
+                self.assertEqual(encode_stats(f.stats, f.pad), raw[767:767 + f.stats_len], p.name)
             seen += 1
         self.assertGreater(seen, 0)
         print(f"\n  {seen} echte Dateien: Round-Trip und Prüfsummen ok", file=sys.stderr)
