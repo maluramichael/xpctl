@@ -271,6 +271,8 @@ namespace XpServer
         static J Ls(Conn c, Req r)
         {
             string root = r.Need("path");
+            string stop = root.Length >= 2 && root[1] == ':' ? Common.RipGuard(r, root.Substring(0, 2)) : null;
+            if (stop != null) return J.Err(stop);
             var x = new LsCtx();
             x.Pats = r.Strs("patterns");
             x.Depth = r.Has("recurse") ? r.Int("recurse") : 0;
@@ -672,6 +674,8 @@ namespace XpServer
         static J Disc(Conn c, Req r)
         {
             string drive = Common.CdDrive(r);
+            string stop = Common.RipGuard(r, drive);
+            if (stop != null) return J.Err(stop);
             string label = Common.VolLabel(drive);
             if (label == null) return J.Err("kein Medium in " + drive);
             string root = drive + "\\";

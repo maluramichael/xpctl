@@ -285,6 +285,8 @@ namespace XpServer
         static J Eject(Conn c, Req r)
         {
             string drive = Common.CdDrive(r);
+            string stop = Common.RipGuard(r, drive);
+            if (stop != null) return J.Err(stop);
             IntPtr h = CreateFileW("\\\\.\\" + drive, 0x80000000, 0x3, IntPtr.Zero, 3, 0, IntPtr.Zero);
             if (h == IntPtr.Zero || h == new IntPtr(-1)) return J.Err("Laufwerk " + drive + " nicht zu öffnen");
             bool ok; int err = 0;
@@ -333,6 +335,8 @@ namespace XpServer
         static J RipIso(Conn c, Req r)
         {
             string drive = Common.CdDrive(r).TrimEnd(':');
+            string stop = Common.RipGuard(r, drive);
+            if (stop != null) return J.Err(stop);
             string target = r.Need("target");
             const int sec = 2048, tail = 150;
             string parent = Path.GetDirectoryName(target);
@@ -389,6 +393,8 @@ namespace XpServer
         static J Toc(Conn c, Req r)
         {
             string drive = Drv(r);
+            string stop = Common.RipGuard(r, drive);
+            if (stop != null) return J.Err(stop);
             using (var f = new RawDev(drive))
             {
                 var tr = ReadToc(f);
@@ -411,6 +417,8 @@ namespace XpServer
         static J RipCd(Conn c, Req r)
         {
             string drive = Drv(r);
+            string stop = Common.RipGuard(r, drive);
+            if (stop != null) return J.Err(stop);
             string folder = r.Need("folder"), name = r.Need("name");
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
             var start = DateTime.UtcNow;
@@ -798,7 +806,8 @@ namespace XpServer
             }
             if (drives.Count == 0) drives.Add(Common.CdDrive(new Req(new J())));
             var o = new J();
-            foreach (var d in drives) o[d] = Common.VolLabel(d);
+            foreach (var d in drives)
+                o[d] = Common.RipGuard(r, d) != null ? "(nicht abgefragt: Alcohol-Assistent offen, --force)" : Common.VolLabel(d);
             return J.Ok("drives", o);
         }
 

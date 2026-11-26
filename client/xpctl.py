@@ -1142,11 +1142,11 @@ def cmd_unmount(sock, args):
 
 
 def cmd_eject(sock, args):
-    return 0 if rpc(sock, {"op": "eject", "drive": args.drive}) else 1
+    return 0 if rpc(sock, {"op": "eject", "force": args.force, "drive": args.drive}) else 1
 
 
 def cmd_vol(sock, args):
-    r = rpc(sock, {"op": "vol", "drives": args.drives or None})
+    r = rpc(sock, {"op": "vol", "force": args.force, "drives": args.drives or None})
     if r is None:
         return 1
     for d, l in sorted(r["drives"].items()):
@@ -1155,7 +1155,7 @@ def cmd_vol(sock, args):
 
 
 def cmd_ripiso(sock, args):
-    r = rpc(sock, {"op": "ripiso", "drive": args.drive, "target": args.target})
+    r = rpc(sock, {"op": "ripiso", "force": args.force, "drive": args.drive, "target": args.target})
     if r is None:
         return 1
     print(f"{r['target']}: Label {r['label']}, {r['sectors']} Sektoren, md5 {r['md5']}, {r['seconds']} s")
@@ -1336,7 +1336,7 @@ def _size(n):
 
 def cmd_ls(sock, args):
     depth = 0 if args.recurse is None else args.recurse
-    r = rpc(sock, {"op": "ls", "path": args.path, "patterns": args.pattern, "recurse": depth,
+    r = rpc(sock, {"op": "ls", "force": args.force, "path": args.path, "patterns": args.pattern, "recurse": depth,
                    "files_only": args.files, "limit": args.limit})
     if r is None:
         return 1
@@ -1419,7 +1419,7 @@ def cmd_rm(sock, args):
 
 
 def cmd_disc(sock, args):
-    r = rpc(sock, {"op": "disc", "drive": args.drive})
+    r = rpc(sock, {"op": "disc", "force": args.force, "drive": args.drive})
     if r is None:
         return 1
     print(f"{r['drive']} Label {r['label']}")
@@ -1646,7 +1646,7 @@ def cmd_nv(sock, args):
 
 
 def cmd_toc(sock, args):
-    r = rpc(sock, {"op": "toc", "drive": args.drive})
+    r = rpc(sock, {"op": "toc", "force": args.force, "drive": args.drive})
     if r is None:
         return 1
     print(f"{args.drive} Label {r['label']}")
@@ -1657,7 +1657,7 @@ def cmd_toc(sock, args):
 
 
 def cmd_ripcd(sock, args):
-    r = rpc(sock, {"op": "ripcd", "drive": args.drive, "folder": args.folder, "name": args.name})
+    r = rpc(sock, {"op": "ripcd", "force": args.force, "drive": args.drive, "folder": args.folder, "name": args.name})
     if r is None:
         return 1
     print(f"{r['cue']}: Label {r['label']}, {len(r['tracks'])} Spuren, {r['seconds']} s")
@@ -1836,11 +1836,13 @@ def main() -> int:
 
     p = sub.add_parser("eject", help="physisches Laufwerk auswerfen")
     p.add_argument("--drive", help="Laufwerk (Standard: cd_drive des Servers oder erstes CD-Laufwerk)")
+    p.add_argument("--force", action="store_true", help="auch wenn ein Alcohol-Assistent offen ist")
     p.set_defaults(fn=cmd_eject)
 
     p = sub.add_parser("ripiso", help="ungeschützte CD 1:1 als ISO lesen (geschützte: Alcohol MDF/MDS)")
     p.add_argument("target", help="Zieldatei auf dem XP-Rechner, z. B. Ordner\\Spiel.iso")
     p.add_argument("--drive", help="CD-Laufwerk (Standard wie bei eject)")
+    p.add_argument("--force", action="store_true", help="auch wenn ein Alcohol-Assistent offen ist")
     p.set_defaults(fn=cmd_ripiso)
 
     p = sub.add_parser("ini", help="Wert in INI/CONF lesen oder setzen (Sicherung .xpctl-bak), mehrere Dateien möglich")
@@ -1857,12 +1859,14 @@ def main() -> int:
 
     p = sub.add_parser("toc", help="Spuren der CD (Daten/Audio, Länge)")
     p.add_argument("--drive", default="E:")
+    p.add_argument("--force", action="store_true", help="auch wenn ein Alcohol-Assistent offen ist")
     p.set_defaults(fn=cmd_toc)
 
     p = sub.add_parser("ripcd", help="CD mit Audiospuren als CUE + ISO/BIN je Spur (Mixed-Mode, DOSBox)")
     p.add_argument("folder", help=r"Zielordner, z.B. C:\Rips\Bleifuss")
     p.add_argument("name", help="Dateiname ohne Endung")
     p.add_argument("--drive", default="E:")
+    p.add_argument("--force", action="store_true", help="auch wenn ein Alcohol-Assistent offen ist")
     p.set_defaults(fn=cmd_ripcd)
 
     p = sub.add_parser("pesec", help="PE-Sektionen einer Exe (stxt774/stxt371 = SafeDisc 2+, .securom)")
@@ -1896,6 +1900,7 @@ def main() -> int:
     p.add_argument("-p", "--pattern", nargs="+", help="Dateimuster, z.B. *.exe *.iso")
     p.add_argument("--files", action="store_true", help="nur Dateien")
     p.add_argument("--limit", type=int, default=2000)
+    p.add_argument("--force", action="store_true", help="auch wenn ein Alcohol-Assistent offen ist")
     p.set_defaults(fn=cmd_ls)
 
     p = sub.add_parser("cat", help="Textdatei lesen/filtern (statt run type/findstr)")
@@ -1936,6 +1941,7 @@ def main() -> int:
     p = sub.add_parser("disc", help="CD prüfen: Label, Kopierschutz-Dateien, PE-Sektionen")
     p.add_argument("drive", nargs="?", help="CD-Laufwerk (Standard wie bei eject)")
     p.add_argument("--db", help="Kopierschutz-Datenbank (Standard: disc-protection.json neben xpctl.py)")
+    p.add_argument("--force", action="store_true", help="auch wenn ein Alcohol-Assistent offen ist")
     p.set_defaults(fn=cmd_disc)
 
     p = sub.add_parser("ver", help="Version/Größe/Datum/md5 von Exe- und DLL-Dateien")
@@ -1965,6 +1971,7 @@ def main() -> int:
 
     p = sub.add_parser("vol", help="Datenträgerbezeichnung der Laufwerke")
     p.add_argument("drives", nargs="*")
+    p.add_argument("--force", action="store_true", help="auch wenn ein Alcohol-Assistent offen ist")
     p.set_defaults(fn=cmd_vol)
 
     p = sub.add_parser("settext", help="Text direkt in ein Edit-Control schreiben")

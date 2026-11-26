@@ -67,6 +67,44 @@ namespace XpServer
             return ok ? name.ToString() : null;
         }
 
+        // ---------- Schutz laufender Alcohol-Rips ----------
+
+        delegate bool EnumProc(IntPtr h, IntPtr l);
+        [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc f, IntPtr l);
+        [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowTextW(IntPtr h, StringBuilder s, int n);
+
+        static readonly string[] AlcoholBusy = {
+            "Imageassistent", "Messung der Datenposition", "Kopierassistent", "Aufzeichnungsassistent",
+            "Image Making Wizard", "Data Position Measurement", "Copy Wizard", "Burning Wizard" };
+
+        /// <summary>Text, wenn ein Alcohol-Assistent offen ist und drive ein echtes CD/DVD-Laufwerk ist (nicht image_drive),
+        /// sonst null. Ein Zugriff auf das Laufwerk während der DPM-Messung ließ einen DVD-Rip mit
+        /// "Logical Unit Not Ready" abbrechen. force schaltet die Prüfung ab.</summary>
+        public static string RipGuard(Req r, string drive)
+        {
+            if (r.Bool("force") || string.IsNullOrEmpty(drive)) return null;
+            string d = drive.TrimEnd('\\').TrimEnd(':').ToUpperInvariant() + ":";
+            if (GetDriveTypeW(d + "\\") != 5) return null;
+            string img = Py.Truthy(Cfg.Get("image_drive")) ? Cfg.Str("image_drive").TrimEnd('\\').ToUpperInvariant() : null;
+            if (img != null && img.TrimEnd(':') + ":" == d) return null;
+            string hit = null;
+            EnumWindows(delegate (IntPtr h, IntPtr l)
+            {
+                if (!IsWindowVisible(h)) return true;
+                var sb = new StringBuilder(256);
+                GetWindowTextW(h, sb, 256);
+                string t = sb.ToString();
+                if (!t.StartsWith("Alcohol")) return true;
+                foreach (var b in AlcoholBusy)
+                    if (t.IndexOf(b, StringComparison.Ordinal) >= 0) { hit = t; return false; }
+                return true;
+            }, IntPtr.Zero);
+            if (hit == null) return null;
+            return string.Format("Alcohol-Assistent offen (\"{0}\"): {1} nicht anfassen, ein Zugriff kann den Rip abbrechen. " +
+                "Assistent schließen oder --force.", hit, d);
+        }
+
         // ---------- Programme (Uninstall-Schlüssel) ----------
 
         public const string HklmUninstall = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall";
