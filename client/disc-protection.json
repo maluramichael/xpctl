@@ -418,11 +418,11 @@
    "verified": true
   },
   {
-   "game": "",
-   "year": "",
-   "disc": "",
+   "game": "Der Herr der Ringe: Die Schlacht um Mittelerde Anthologie",
+   "year": "2007",
+   "disc": "Dokumentation/Handbücher",
    "label": "070828_1118",
-   "lang": "",
+   "lang": "de",
    "protection": "keiner",
    "evidence": "Doku-/Handbuch-CD der BFME-Anthologie, keine Schutzdateien, UDF (ripiso liest nur den ISO9660-Stub)",
    "image": "ISO (Alcohol, Normal CD)",
