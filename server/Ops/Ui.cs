@@ -494,5 +494,24 @@ namespace XpServer
             PostMessageW(P(NeedInt(r, "hwnd")), 0x0010, IntPtr.Zero, IntPtr.Zero);
             return J.Ok();
         }
+
+        [DllImport("user32.dll")] static extern bool MoveWindow(IntPtr h, int x, int y, int w, int hgt, bool repaint);
+        [DllImport("user32.dll")] static extern bool IsZoomed(IntPtr h);
+
+        /// <summary>Fenster auf Bildschirmkoordinaten setzen (minimiert/maximiert vorher wiederherstellen).</summary>
+        [Op("winmove")]
+        static J WinMove(Conn c, Req r)
+        {
+            IntPtr h = P(NeedInt(r, "hwnd"));
+            if (!IsWindow(h)) return J.Err("Fenster existiert nicht");
+            int x = (int)NeedInt(r, "x"), y = (int)NeedInt(r, "y");
+            int w = (int)NeedInt(r, "w"), hh = (int)NeedInt(r, "h");
+            if (w < 50 || hh < 50) return J.Err("Breite/Höhe mindestens 50");
+            if (IsIconic(h) || IsZoomed(h)) ShowWindow(h, 9);
+            if (!MoveWindow(h, x, y, w, hh, true)) return J.Err("MoveWindow fehlgeschlagen");
+            RECT rc;
+            GetWindowRect(h, out rc);
+            return J.Ok("rect", new List<object> { (long)rc.left, (long)rc.top, (long)rc.right, (long)rc.bottom });
+        }
     }
 }

@@ -57,6 +57,7 @@ import argparse
 import hashlib
 import hmac
 import json
+import math
 import os
 import re
 import socket
@@ -1017,6 +1018,41 @@ def cmd_focus(sock, args):
 
 def cmd_close(sock, args):
     return 0 if rpc(sock, {"op": "close", "hwnd": int(args.hwnd, 0)}) else 1
+
+
+def tile_rects(n, cols, sw, sh, top=0, bottom=0, gap=0):
+    """Gitter für n Fenster: Liste (x, y, w, h), Zeilen von oben, gleich große Zellen."""
+    if n <= 0:
+        return []
+    cols = max(1, min(cols or math.ceil(math.sqrt(n)), n))
+    rows = math.ceil(n / cols)
+    w = (sw - gap * (cols + 1)) // cols
+    h = (sh - top - bottom - gap * (rows + 1)) // rows
+    return [(gap + (i % cols) * (w + gap), top + gap + (i // cols) * (h + gap), w, h) for i in range(n)]
+
+
+def cmd_win(sock, args):
+    if args.action == "move":
+        r = rpc(sock, {"op": "winmove", "hwnd": int(args.hwnd, 0), "x": args.x, "y": args.y, "w": args.w, "h": args.h})
+        if r:
+            print("{:#x} -> {},{}-{},{}".format(int(args.hwnd, 0), *r["rect"]))
+        return 0 if r else 1
+    u = rpc(sock, {"op": "ui"})
+    if u is None:
+        return 1
+    rx = re.compile(args.title, re.I)
+    wins = [w for w in u["windows"] if rx.search(w["text"]) and (not args.exe or w["exe"].lower() == args.exe.lower())]
+    if not wins:
+        print(f"kein Fenster passt auf {args.title!r}")
+        return 1
+    wins.sort(key=lambda w: w["text"].lower())
+    sw, sh = u["screen"]
+    rc = 0
+    for w, (x, y, ww, hh) in zip(wins, tile_rects(len(wins), args.cols, sw, sh, bottom=args.taskbar, gap=args.gap)):
+        r = rpc(sock, {"op": "winmove", "hwnd": w["hwnd"], "x": x, "y": y, "w": ww, "h": hh})
+        print(f"{w['hwnd']:#x} \"{one(w['text'], 50)}\" -> {x},{y} {ww}x{hh}" if r else f"{w['hwnd']:#x}: Fehler")
+        rc |= 0 if r else 1
+    return rc
 
 
 BUTTON_CLASSES = ("button", "tnewbutton", "tbutton")
@@ -1994,6 +2030,20 @@ def main() -> int:
     p = sub.add_parser("close", help="WM_CLOSE an ein Fenster")
     p.add_argument("hwnd")
     p.set_defaults(fn=cmd_close)
+
+    p = sub.add_parser("win", help="Fenster verschieben (move) oder als Gitter anordnen (tile)")
+    ws = p.add_subparsers(dest="action", required=True)
+    q = ws.add_parser("move", help="HWND X Y BREITE HÖHE (Bildschirmpixel)")
+    q.add_argument("hwnd")
+    for k in ("x", "y", "w", "h"):
+        q.add_argument(k, type=int)
+    q = ws.add_parser("tile", help="alle Fenster, deren Titel auf REGEX passt, nach Titel sortiert im Gitter")
+    q.add_argument("title", help="Regex auf den Fenstertitel")
+    q.add_argument("--exe", help="nur Fenster dieses Prozesses, z.B. Explorer.EXE")
+    q.add_argument("--cols", type=int, default=0, help="Spalten (Standard: Wurzel der Anzahl)")
+    q.add_argument("--gap", type=int, default=0, help="Abstand in Pixeln")
+    q.add_argument("--taskbar", type=int, default=30, help="unten freilassen (Taskleiste)")
+    p.set_defaults(fn=cmd_win)
 
     p = sub.add_parser("updates", help="installierte Hotfixes/Updates, SP-Stand, POSReady")
     p.add_argument("--grep", help="Filter (Teilstring, ohne Groß/Klein)")
