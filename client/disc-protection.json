@@ -371,6 +371,36 @@
    "image": "ISO",
    "notes": "Start braucht die CD (Image mounten)",
    "verified": true
+  },
+  {
+   "game": "Der Herr der Ringe: Die Schlacht um Mittelerde II",
+   "year": 2006,
+   "disc": [
+    "DVD (Mittelerde-Anthologie, EA Classics)"
+   ],
+   "label": "LOTRBFME2",
+   "lang": "de",
+   "protection": "unklar (SafeDisc- oder SecuROM-Merkmale)",
+   "evidence": "00000001.TMP, 00000002.TMP, lotrsec.big auf der DVD, Setup-Exes ohne Schutzsektionen; Alcohol schlägt selbst Datentyp SecuROM vor. Schutz steckt vermutlich in der installierten Exe (nach Installation mit pesec prüfen)",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SecuROM (DVD, DPM 4x)",
+   "notes": "Rip 26.11.2026 ohne Lesefehler, 5,54 GB, 29 min",
+   "verified": false
+  },
+  {
+   "game": "Der Herr der Ringe: Die Schlacht um Mittelerde II: Aufstieg des Hexenkönigs",
+   "year": 2006,
+   "disc": [
+    "DVD (Einzelausgabe)"
+   ],
+   "label": "LOTRBFME2EP1",
+   "lang": "de",
+   "protection": "unklar (SafeDisc- oder SecuROM-Merkmale)",
+   "evidence": "00000001.TMP, 00000002.TMP, lotrsec.big auf der DVD, Setup-Exes ohne Schutzsektionen; Alcohol schlägt selbst Datentyp SecuROM vor. Schutz steckt vermutlich in der installierten Exe (nach Installation mit pesec prüfen)",
+   "image": "MDF/MDS",
+   "alcohol_datatype": "SecuROM (DVD, DPM 4x)",
+   "notes": "Anthologie-DVD hat Risse, Einzel-DVD gerippt (26.11.2026)",
+   "verified": false
   }
  ]
 }
