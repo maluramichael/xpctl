@@ -416,6 +416,19 @@
    "alcohol_datatype": "SecuROM (DVD, DPM 4x)",
    "notes": "Rip 26.11.2026 ohne Lesefehler, 3,95 GB, 17 min",
    "verified": true
+  },
+  {
+   "game": "",
+   "year": "",
+   "disc": "",
+   "label": "070828_1118",
+   "lang": "",
+   "protection": "keiner",
+   "evidence": "Doku-/Handbuch-CD der BFME-Anthologie, keine Schutzdateien, UDF (ripiso liest nur den ISO9660-Stub)",
+   "image": "ISO (Alcohol, Normal CD)",
+   "alcohol_datatype": "Normal CD",
+   "notes": "",
+   "verified": true
   }
  ]
 }
