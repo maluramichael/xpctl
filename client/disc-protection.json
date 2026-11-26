@@ -411,11 +411,11 @@
    "label": "LOTRBFME",
    "lang": "de",
    "protection": "SafeDisc 2/3/4 (in der installierten game.dat)",
-   "evidence": "00000001.TMP, 00000002.TMP, lotrsec.big auf der DVD; installierte game.dat mit Sektionen stxt774/stxt371 (26.11.2026). Alcohol schlug fälschlich SecuROM vor",
+   "evidence": "00000001.TMP, 00000002.TMP, lotrsec.big auf der DVD; installierte game.dat mit Sektionen stxt774/stxt371 (26.11.2026). Alcohol schlug fälschlich SecuROM vor; Start vom gemounteten MDS (Alcohol, ohne Emulation/ACID) klappt (26.11.2026)",
    "image": "MDF/MDS",
    "alcohol_datatype": "SecuROM (DVD, DPM 4x)",
    "notes": "Rip 26.11.2026 ohne Lesefehler, 3,95 GB, 17 min",
-   "verified": false
+   "verified": true
   }
  ]
 }
