@@ -135,6 +135,8 @@ under `games` in `game-versions.json` and set `stand` in the header to today's d
     ./xpctl.py ini output 'C:\Games\X\dosbox.conf' -s sdl -v opengl   # set an INI/CONF value, backup as .xpctl-bak
     ./xpctl.py nv                                         # global NVIDIA 3D settings (NVAPI)
     ./xpctl.py nv vsync on                                # vsync app|on|off, triplebuffer on|off, prerender N
+    ./xpctl.py nv aa override; ./xpctl.py nv aamethod 4x  # forced antialiasing (aa app|override|enhance, aamethod none|2x|2xq|4x|8x|16x)
+    ./xpctl.py nv af user; ./xpctl.py nv aflevel 16       # forced anisotropic filtering (af app|user, aflevel 1-16)
     ./xpctl.py toc                                        # CD tracks (data/audio)
     ./xpctl.py ripcd 'C:\Rips\Game' 'Game'               # CD with audio tracks as CUE + ISO + one BIN per track
 

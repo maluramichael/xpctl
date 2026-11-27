@@ -12,7 +12,7 @@ namespace XpServer
     /// <summary>Start: Argumente, Konfiguration, Passwort, Server, Wächter, Tray.</summary>
     public static class Program
     {
-        public const int Version = 19;
+        public const int Version = 20;
         public const int DefaultPort = 5050;
         public const int ExitHandover = 42;   // Update übergeben, Wächter beendet sich
 

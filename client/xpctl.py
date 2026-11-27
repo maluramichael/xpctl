@@ -1899,8 +1899,9 @@ def main() -> int:
     p.add_argument("--value", "-v", help="ohne: nur lesen")
     p.set_defaults(fn=cmd_ini)
 
-    p = sub.add_parser("nv", help="globale NVIDIA-3D-Einstellung lesen/setzen (vsync app|on|off, triplebuffer on|off, prerender N)")
-    p.add_argument("setting", nargs="?", choices=["vsync", "triplebuffer", "prerender"])
+    p = sub.add_parser("nv", help="globale NVIDIA-3D-Einstellung lesen/setzen (vsync app|on|off, triplebuffer on|off, prerender N, "
+                       "aa app|override|enhance, aamethod none|2x|2xq|4x|8x|16x, af app|user, aflevel 1-16; aa/af ab Server v20)")
+    p.add_argument("setting", nargs="?", choices=["vsync", "triplebuffer", "prerender", "aa", "aamethod", "af", "aflevel"])
     p.add_argument("value", nargs="?")
     p.set_defaults(fn=cmd_nv)
 

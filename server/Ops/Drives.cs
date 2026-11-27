@@ -528,6 +528,11 @@ namespace XpServer
             new NvDef { Name = "vsync", Id = 0x00A879CF, Keys = new[] { "app", "off", "on" }, Vals = new uint[] { 0x60925292, 0x08416747, 0x47814940 } },
             new NvDef { Name = "triplebuffer", Id = 0x20FDD1F9, Keys = new[] { "off", "on" }, Vals = new uint[] { 0, 1 } },
             new NvDef { Name = "prerender", Id = 0x007BA09E, Keys = null, Vals = null },
+            // IDs/Werte aus NVIDIA NvApiDriverSettings.h: AA_MODE_SELECTOR/METHOD, ANISO_MODE_SELECTOR/LEVEL
+            new NvDef { Name = "aa", Id = 0x107EFC5B, Keys = new[] { "app", "override", "enhance" }, Vals = new uint[] { 0, 1, 2 } },
+            new NvDef { Name = "aamethod", Id = 0x10D773D2, Keys = new[] { "none", "2x", "2xq", "4x", "8x", "16x" }, Vals = new uint[] { 0x0, 0xE, 0xF, 0x10, 0x25, 0x1C } },
+            new NvDef { Name = "af", Id = 0x10D2BB16, Keys = new[] { "app", "user" }, Vals = new uint[] { 0, 1 } },
+            new NvDef { Name = "aflevel", Id = 0x101E61A9, Keys = null, Vals = null },
         };
 
         static NvDef NvFind(string name)
