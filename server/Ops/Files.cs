@@ -571,6 +571,20 @@ namespace XpServer
 
         // ---------- rm ----------
 
+        static void ClearReadOnly(string dir)
+        {
+            foreach (var f in Directory.GetFiles(dir, "*", SearchOption.AllDirectories))
+            {
+                var at = File.GetAttributes(f);
+                if ((at & FileAttributes.ReadOnly) != 0) File.SetAttributes(f, at & ~FileAttributes.ReadOnly);
+            }
+            foreach (var d in Directory.GetDirectories(dir, "*", SearchOption.AllDirectories))
+            {
+                var di = new DirectoryInfo(d);
+                if ((di.Attributes & FileAttributes.ReadOnly) != 0) di.Attributes &= ~FileAttributes.ReadOnly;
+            }
+        }
+
         [Op("rm")]
         static J Rm(Conn c, Req r)
         {
@@ -602,6 +616,7 @@ namespace XpServer
                     if (Directory.Exists(full))
                     {
                         if (!r.Bool("recurse")) { errors.Add(p + ": Ordner, recurse nötig"); continue; }
+                        ClearReadOnly(full);   // Dateien von CD-Installationen sind oft schreibgeschützt
                         Directory.Delete(full, true);
                     }
                     else
