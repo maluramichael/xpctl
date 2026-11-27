@@ -31,6 +31,14 @@ The "Spiele" (games) tab lists the games the built-in version database knows, wi
 
 ![Games tab](../docs/img/spiele.png)
 
+The "Sicherung" (backup) tab backs up save games. At the top is the target folder ("Zielordner"): a local folder, a mapped network drive or a UNC path (`\\server\share`). It is stored in `HKCU\Software\xpctl\xpserver`, value `backup_dir`. The folder has to exist: if it doesn't (drive not connected, share unreachable), the backup stops and writes nothing. xpserver never creates the target folder, only one subfolder per game inside it. "Spielstände sichern" (back up save games) writes one plain zip per installed game, `<game>\<game>_YYYY-MM-DD_HH-MM-SS.zip`, but only if a file changed since the last zip of that game. A window shows the progress; closing it does not stop the backup. Below, the tab lists the known games with their save folder, file count, version and newest zip. Where the games keep their saves is in `client/save-locations.json`, embedded when building.
+
+`xpctl saves backup` starts the same backup. The progress window then shows up in the bottom right corner without taking the focus, not on top of other windows, not at all while a program runs fullscreen, and closes itself 8 seconds after a successful run. Only one backup runs at a time; a second start (button or command) gets "es läuft schon eine Sicherung" (a backup is already running).
+
+The zips open in any zip tool, including the XP Explorer, so restoring by hand works without xpctl. Each zip contains the files with their path relative to the save folder and an `info.json` (game, exe version, original folders, time with UTC offset, size, change time and md5 per file). Before the final name the zip is written as `.part`, read back completely and checked (CRC of every entry).
+
+![Backup tab](../docs/img/sicherung.png)
+
 ![Live window](../docs/img/live-fenster.png)
 
 Right-click shows the menu:
@@ -99,8 +107,8 @@ Without the script: `dotnet build -c Release`, result in `bin/Release/net35/xpse
 
 | Folder | Contents |
 |---|---|
-| `Core/` | startup and options (`Program.cs`), protocol, login and dispatch (`Net.cs`), JSON (`Json.cs`), registry access modeled on Python's `winreg` (`Reg.cs`), child processes without a console window (`Proc.cs`), configuration, log, watchdog and update (`Supervisor.cs`) |
-| `Ops/` | the commands, one file per group: `Core.cs` (ping, run, put, get, update), `Ui.cs`, `Inventory.cs`, `Shell.cs`, `Drives.cs`, `Files.cs` |
+| `Core/` | startup and options (`Program.cs`), protocol, login and dispatch (`Net.cs`), JSON (`Json.cs`), zip writer and reader for .NET 3.5 (`Zip.cs`), registry access modeled on Python's `winreg` (`Reg.cs`), child processes without a console window (`Proc.cs`), configuration, log, watchdog and update (`Supervisor.cs`) |
+| `Ops/` | the commands, one file per group: `Core.cs` (ping, run, put, get, update), `Ui.cs`, `Inventory.cs`, `Shell.cs`, `Drives.cs`, `Files.cs`, `SaveBackup.cs` (save game backup) |
 | `Ui/` | tray icon, menu, live window, dialogs, first-run setup |
 | `tests/` | `parity.py` and test cases |
 | `legacy-python/` | the old Python server (reference for the port, no longer developed) |

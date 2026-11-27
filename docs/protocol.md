@@ -28,3 +28,14 @@ Ops that carry file contents run in three steps:
 ## ping
 
 `{"op": "ping"}` returns `version`, `sha256` (of the running exe), `kind` (`"net"` for the .NET server, missing on the old Python server), `runtime`, `host`, `os`, `script`, `cwd`, `time`, `supervised`.
+
+## savebackup (v21)
+
+`{"op": "savebackup", "games": ["d2"], "dest": "Z:\\saves", "list": false, "dialog": true}` backs up the save folders of the games in `client/save-locations.json` on the XP machine. All fields are optional: without `games` every known game, without `dest` the configured target folder (`savetarget`), `list` only shows what would be backed up, `dialog: false` shows no progress window.
+
+Errors that stop everything come back as `{"ok": false, "error": ...}`: unknown game, no target folder configured, target folder does not exist, a backup is already running. Otherwise `{"ok": true, "dest": ..., "list": ..., "games": [...]}` with one entry per game: `game`, `title`, `status` (`neu` = new zip, `unverändert` = unchanged, `leer` = empty, `nicht installiert` = not installed, `fehler` = error, with `list`: `installiert`), plus where known `save_dir`, `install_dir`, `version`, `zip` (new or newest zip), `files`, `size`, `zip_size`, `running` (game processes running during the backup) and `error`.
+
+## savetarget (v21)
+
+`{"op": "savetarget"}` returns `dest` (target folder or `null`), `exists`, `games` (ids from `save-locations.json`) and `db_stand`. `{"op": "savetarget", "set": "Z:\\saves"}` sets the folder first (absolute path with drive letter or UNC, the folder does not have to exist yet; `""` removes it).
+

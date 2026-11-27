@@ -69,11 +69,6 @@ class FakeRemote(Remote):
         return [Entry(real.rsplit("\\", 1)[1], len(v), "")
                 for k, (real, v) in self.fs.items() if k.startswith(pre) and "\\" not in k[len(pre):]]
 
-    def tree(self, folder):
-        pre = folder.lower().rstrip("\\") + "\\"
-        return [(real[len(pre):], Entry(real.rsplit("\\", 1)[1], len(v), "2026-11-23 17:20"))
-                for k, (real, v) in self.fs.items() if k.startswith(pre)]
-
     def md5(self, path):
         return self._md5 if path.lower().endswith("speed.exe") else None
 

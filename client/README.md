@@ -150,7 +150,7 @@ under `games` in `game-versions.json` and set `stand` in the header to today's d
     ./xpctl.py saves nfsu show Player [--json]        # all fields of a profile
     ./xpctl.py saves nfsu set Player MOTIONBLUR=0 RES=4 [--dry-run]
     ./xpctl.py saves nfsu repair Player               # recompute wrong checksums
-    ./xpctl.py saves backup [nfsu d2] [--to DIR]      # save folders of the installed games as zip files
+    ./xpctl.py saves backup [nfsu d2]                 # back up the save folders as zip files (on the XP machine)
     ./xpctl.py saves d2 show Hero                     # Diablo II: class, level, stats, gold, difficulty
     ./xpctl.py saves d2 set Hero strength=50 goldbank=100000 [--force]   # --force: game sits in the main menu
 
@@ -168,24 +168,26 @@ Writing is guarded:
 
 Tested in game: NFSU loads a `.cfg` changed by `set` (light streaks on). `Speed.exe` must not be running for this: the game rewrites its files itself when switching profiles, so `saves` refuses `--force` for NFSU. Each game class decides whether `--force` is allowed (`force_ok`, reason in `force_refusal`). Whether NFSU loads an `.opt` or `.ugd` fixed by `repair` has not been tested yet.
 
-**Backups as zip files.** `saves backup` reads the whole save folder of every installed game (subfolders included) and writes a plain zip file per game on the client:
+**Backups as zip files.** The XP machine backs up itself (xpserver v21): one plain zip per installed game in a target folder on the XP machine, for example a mapped network drive. The same backup runs from the "Sicherung" tab in the xpserver window (see `server/README.md`).
 
-    ~/xpctl-saves/d2/d2_2026-11-27_21-19-11.zip
-    ~/xpctl-saves/nfsu/nfsu_2026-11-27_21-19-11.zip
+    ./xpctl.py saves target 'Z:\usagi\saves'        # set the target folder (stored on the XP machine)
+    ./xpctl.py saves target                           # show it and whether it exists right now
+    ./xpctl.py saves backup [--list]                  # all known games; --list only shows folders and newest zip
+    ./xpctl.py saves backup d2 [--to 'D:\other']      # one game, other target for this run only
+    ./xpctl.py saves backup --no-dialog               # no progress window on the XP machine
 
-- target folder: `--to`, otherwise `XPCTL_SAVES_ARCHIVE`, otherwise `xpctl-saves` in the home folder.
-- file name `<game>_YYYY-MM-DD_HH-MM-SS.zip` in the client's local time: sorting by name is sorting by time, and there are no colons, so the names also work on Windows.
-- inside: the files with their path relative to the save folder, plus `info.json` (game, exe version, original save folder, time with UTC offset, size, change time and md5 of every file). Any zip tool opens it, so restoring by hand works without xpctl.
-- a new zip is only written when a file differs from the newest zip of that game, otherwise the game shows `unverändert`. An existing zip is never overwritten.
-- the zip is written as `.part`, tested (`testzip` and md5 of every entry), then renamed. Mode 600, because the NFSU online profile (`*0.pro`) holds login data.
-- the backup also works for unknown exe versions (read-only classes). If the game is running, the zip is still written with a warning, because a file may be half written.
+- the target folder has to exist, otherwise the backup stops with an error and writes nothing. Only the subfolder per game is created.
+- file name `<game>\<game>_YYYY-MM-DD_HH-MM-SS.zip` in the XP machine's local time: sorting by name is sorting by time, no colons.
+- inside: the whole save folder with subfolders and `info.json` (game, exe version, original folders, time with UTC offset, size, change time and md5 per file). Any zip tool opens it, the XP Explorer too.
+- a new zip is only written when a file differs from the newest zip of that game (CRC and size), otherwise `unverändert`. An existing zip is never overwritten.
+- the backup also works for unknown exe versions. If the game is running, the zip is still written with a warning.
+- where the games keep their saves: `client/save-locations.json` (embedded in xpserver when building; a newer file next to `xpserver.exe` wins). `tests/test_save_locations.py` checks that it finds the same folders as the classes in `savegames/`.
 
 Not there yet: restore, removing old zips (keep daily/weekly/monthly), registry values as `.reg`, automatic runs.
 
 **New game or new version.** The code lives in `client/savegames/`:
 
 - `core.py`: the interfaces. `Remote` (file access on the XP machine), `SaveFile` (one file: `parse`, `serialize`, `fields`, `set`, `problems`, `repair`), `Profile`, `Game`.
-- `archive.py`: zip backups for `saves backup`.
 - `nfsu.py`: example of a game.
 
 A game is a base class derived from `Game` with `id`, `title`, `exe`, `locate` (install folder, usually from the registry), `save_dir`, `profiles` and `load`. Without a matching version class it may only read. Every tested exe gets a subclass whose name carries the version, with `version` and `exe_md5`:
@@ -216,6 +218,7 @@ If the format differs between versions, the version class only overrides what it
 
 - `desktop-gruppen.example.txt`: example for `desk group`.
 - `game-versions.json`: version database for `games` and `gamecheck`.
+- `save-locations.json`: where games keep their save games, for `saves backup`.
 - `disc-protection.json`: copy protection database for `disc`.
 - `savegames/`: save game formats for `saves`.
 

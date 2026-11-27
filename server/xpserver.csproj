@@ -24,5 +24,7 @@
     <Reference Include="System.Management" />
     <!-- Versionsdatenbank der Spiele, Quelle bleibt client/game-versions.json -->
     <EmbeddedResource Include="..\client\game-versions.json" LogicalName="game-versions.json" />
+    <!-- Speicherorte der Spielstände für die Sicherung, Quelle bleibt client/save-locations.json -->
+    <EmbeddedResource Include="..\client\save-locations.json" LogicalName="save-locations.json" />
   </ItemGroup>
 </Project>

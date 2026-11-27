@@ -92,6 +92,13 @@ namespace XpServer.Ui
             _icon.Visible = true;
             _anim.Start();
 
+            // Sicherung (Knopf oder Befehl): Fortschritt anzeigen, per Befehl nie über einem Vollbildspiel
+            Ops.SaveBackup.Started += (job, remote) => Post(() =>
+            {
+                if (remote && Desk.FullscreenActive()) return;
+                new BackupDialog(job, remote).Show();
+            });
+
             if (Program.Opt.Demo) Post(ShowDash);   // Demo: Fenster gleich zeigen
             else if (!Program.Opt.AfterUpdate && Program.Opt.CrashCount == 0 && !Desk.GetFlag("welcomed", false))
             {

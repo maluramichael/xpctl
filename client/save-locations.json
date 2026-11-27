@@ -1,0 +1,36 @@
+{
+ "_doc": "Wo Spiele ihre Spielstände ablegen, für die Sicherung auf dem XP-Rechner (xpserver, Op savebackup). Ein Eintrag pro Spiel: id (wie in client/savegames), title, exe (im Installationsordner, ihre md5 bestimmt die Version aus game-versions.json), processes (laufen sie, warnt die Sicherung), install (Liste 'SCHLÜSSEL|Wert' mit dem Installationsordner, der erste vorhandene gilt; ohne Treffer gilt das Spiel als nicht installiert), saves (Kandidaten für den Spielstand-Ordner, der erste, den es gibt, wird mit allen Unterordnern gesichert). Kandidat: 'reg:SCHLÜSSEL|Wert' (absolut, '\\x' auf dem Laufwerk der Installation, sonst relativ zum Installationsordner) oder ein Pfad mit {install}, {common_appdata} (All Users\\Application Data), {appdata}, {personal} (Eigene Dateien). Reihenfolge zählt: bei Diablo II 1.14d kommt NewSavePath vor dem alten Save Path. xpserver bettet die Datei beim Bauen ein; eine Datei neben xpserver.exe gilt nur, wenn ihr stand neuer ist.",
+ "stand": "2026-11-27",
+ "games": [
+  {
+   "id": "d2",
+   "title": "Diablo II",
+   "exe": "Game.exe",
+   "processes": ["Game.exe", "Diablo II.exe"],
+   "install": [
+    "HKCU\\Software\\Blizzard Entertainment\\Diablo II|InstallPath",
+    "HKLM\\Software\\Blizzard Entertainment\\Diablo II|InstallPath"
+   ],
+   "saves": [
+    "reg:HKCU\\Software\\Blizzard Entertainment\\Diablo II|NewSavePath",
+    "reg:HKLM\\Software\\Blizzard Entertainment\\Diablo II|NewSavePath",
+    "reg:HKCU\\Software\\Blizzard Entertainment\\Diablo II|Save Path",
+    "reg:HKLM\\Software\\Blizzard Entertainment\\Diablo II|Save Path",
+    "{install}\\save"
+   ]
+  },
+  {
+   "id": "nfsu",
+   "title": "Need for Speed: Underground",
+   "exe": "Speed.exe",
+   "processes": ["Speed.exe"],
+   "install": [
+    "HKLM\\Software\\EA GAMES\\NFS Underground|Install Dir",
+    "HKLM\\Software\\Electronic Arts\\EA GAMES\\NFS Underground|Install Dir"
+   ],
+   "saves": [
+    "{common_appdata}\\NFS Underground"
+   ]
+  }
+ ]
+}

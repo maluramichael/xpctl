@@ -7,8 +7,9 @@ using System.Windows.Forms;
 
 namespace XpServer.Ui
 {
-    /// <summary>Hauptfenster mit zwei Reitern: Übersicht (Status, Zahlen, Aktivität, Live-Log) und
-    /// Spiele (bekannte Spiele, installierte und neueste Version, siehe <see cref="GameScan"/>).</summary>
+    /// <summary>Hauptfenster mit drei Reitern: Übersicht (Status, Zahlen, Aktivität, Live-Log),
+    /// Spiele (bekannte Spiele, installierte und neueste Version, siehe <see cref="GameScan"/>) und
+    /// Sicherung (Zielordner und Knopf für die Spielstand-Sicherung, siehe <see cref="Ops.SaveBackup"/>).</summary>
     public class Dashboard : Form
     {
         [DllImport("user32.dll")] static extern bool ReleaseCapture();
@@ -17,10 +18,15 @@ namespace XpServer.Ui
         readonly LogView _log = new LogView();
         readonly TextBox _filter = new TextBox();
         readonly Label _hint = new Label { Text = "Filter (Strg+F)", AutoSize = false };
-        readonly Chip _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _rescan;
+        readonly Chip _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _tabSave, _rescan, _pick, _go;
+        readonly Field _dest = new Field("ZIELORDNER (Laufwerk oder Freigabe, muss es geben)", false);
+        List<Ops.SaveBackup.GameResult> _saveRows;
+        string _saveState = "";                     // Zustand des Zielordners, im Hintergrund geprüft
+        Color _saveTone = Theme.Faint;
+        volatile bool _saveLoading;
         readonly GamesView _games = new GamesView();
-        int _tab;                                   // 0 Übersicht, 1 Spiele
-        readonly string[] _filters = { "", "" };    // Filtertext je Reiter
+        int _tab;                                   // 0 Übersicht, 1 Spiele, 2 Sicherung
+        readonly string[] _filters = { "", "", "" };    // Filtertext je Reiter
         volatile bool _scanning;
         GameScanResult _scan;
         const int TabW = 92;
@@ -32,6 +38,8 @@ namespace XpServer.Ui
         static int SparkY { get { return CardsY + CardH + Gap; } }
         static int BarY { get { return SparkY + SparkH + Gap; } }
         static int LogY { get { return BarY + BarH + Gap; } }
+        static int SaveGoY { get { return CardsY + 46 + 28 + Gap; } }     // unter Feld und Zustandszeile
+        static int SaveListY { get { return SaveGoY + 44 + Gap + 4; } }
         const int FilterW = 236, LockW = 80, ClearW = 110, ErrW = 86, LogInset = 4;
 
         public Dashboard(Activity act)
@@ -87,8 +95,18 @@ namespace XpServer.Ui
             _rescan = new Chip("Neu prüfen", false) { Visible = false };
             _rescan.Click += (s, e) => StartScan();
             _games.Visible = false;
+            _tabSave = new Chip("Sicherung", true);
+            _tabSave.Click += (s, e) => SetTab(2);
+            _pick = new Chip("Wählen ...", false) { Visible = false };
+            _pick.Click += (s, e) => PickTarget();
+            _go = new Chip("Spielstände sichern", true) { On = true, Visible = false, Face = Theme.Title };
+            _go.Click += (s, e) => StartBackup();
+            _dest.Visible = false;
+            _dest.Box.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SaveTarget(); } };
+            _dest.Box.Leave += (s, e) => SaveTarget();
+            Ops.SaveBackup.Finished += OnBackupFinished;
 
-            Controls.AddRange(new Control[] { _hint, _log, _games, _filter, _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _rescan });
+            Controls.AddRange(new Control[] { _hint, _log, _games, _filter, _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _tabSave, _rescan, _dest, _pick, _go });
             _hint.BringToFront();
             _log.SetLines(Log.Snapshot());
             Log.Line += OnLine;
@@ -97,7 +115,7 @@ namespace XpServer.Ui
             Layout2();
         }
 
-        void UpdateHint() { _hint.Visible = _filter.Text.Length == 0 && !_filter.Focused; }
+        void UpdateHint() { _hint.Visible = _tab != 2 && _filter.Text.Length == 0 && !_filter.Focused; }
 
         string SubTitle()
         {
@@ -109,14 +127,82 @@ namespace XpServer.Ui
         {
             _tabMain.On = t == 0;
             _tabGames.On = t == 1;
+            _tabSave.On = t == 2;
             if (t == _tab) return;
             _filters[_tab] = _filter.Text;
             _tab = t;
             _log.Visible = _errors.Visible = _lock.Visible = _clear.Visible = t == 0;
             _games.Visible = _rescan.Visible = t == 1;
+            _dest.Visible = _pick.Visible = _go.Visible = t == 2;
+            _filter.Visible = t != 2;
             _filter.Text = _filters[t];
+            UpdateHint();
             Layout2();
             if (t == 1 && _scan == null) StartScan();
+            if (t == 2) { _dest.Box.Text = Ops.SaveBackup.Target ?? ""; LoadSave(); }
+        }
+
+        // ---------- Sicherung ----------
+
+        void OnBackupFinished(Ops.SaveBackup.Job j) { OnUi(LoadSave); }
+
+        /// <summary>Spiele, Spielstand-Ordner, letztes Zip und Zustand des Zielordners im Hintergrund lesen
+        /// (Directory.Exists kann bei getrennten Netzlaufwerken lange hängen, nie auf dem UI-Thread).</summary>
+        void LoadSave()
+        {
+            if (_saveLoading) return;
+            _saveLoading = true;
+            _saveState = "prüfe Zielordner ...";
+            _saveTone = Theme.Faint;
+            Invalidate();
+            new System.Threading.Thread(() =>
+            {
+                string state; Color tone; List<Ops.SaveBackup.GameResult> rows = null;
+                try
+                {
+                    string t = Ops.SaveBackup.Target;
+                    if (t == null) { state = "Noch kein Zielordner eingestellt."; tone = Theme.Amber; }
+                    else if (System.IO.Directory.Exists(t)) { state = "Ordner vorhanden. Pro Spiel entsteht darin ein Unterordner."; tone = Theme.Accent; }
+                    else { state = "Gibt es gerade nicht (Laufwerk verbunden, Freigabe erreichbar?). Die Sicherung bricht dann ab."; tone = Theme.Red; }
+                    rows = Ops.SaveBackup.Run(null, null, true, false, false).Games;
+                }
+                catch (Exception ex) { state = "Fehler: " + ex.Message; tone = Theme.Red; }
+                OnUi(() => { _saveState = state; _saveTone = tone; if (rows != null) _saveRows = rows; _saveLoading = false; Invalidate(); });
+            }) { IsBackground = true, Name = "sicherung-übersicht" }.Start();
+        }
+
+        void SaveTarget()
+        {
+            string want = _dest.Box.Text.Trim();
+            if (want == (Ops.SaveBackup.Target ?? "")) return;
+            try { Ops.SaveBackup.Target = Ops.SaveBackup.CleanTarget(want); }
+            catch (Exception ex) { Dialogs.Error(ex.Message); _dest.Box.Text = Ops.SaveBackup.Target ?? ""; return; }
+            _dest.Box.Text = Ops.SaveBackup.Target ?? "";
+            Log.Write("  Zielordner der Sicherung: " + (Ops.SaveBackup.Target ?? "(keiner)"), LogKind.System);
+            LoadSave();
+        }
+
+        void PickTarget()
+        {
+            using (var d = new FolderBrowserDialog { Description = "Zielordner für die Spielstand-Sicherung", ShowNewFolderButton = true })
+            {
+                var cur = Ops.SaveBackup.Target;
+                if (cur != null && cur.Length >= 2 && cur[1] == ':') d.SelectedPath = cur;   // kein Netzpfad: der würde hier hängen
+                if (d.ShowDialog(this) != DialogResult.OK) return;
+                _dest.Box.Text = d.SelectedPath;
+                SaveTarget();
+            }
+        }
+
+        void StartBackup()
+        {
+            SaveTarget();
+            new System.Threading.Thread(() =>
+            {
+                try { Ops.SaveBackup.Run(null, null, false, false, true); }
+                catch (OpError ex) { OnUi(() => Dialogs.Error(ex.Message)); }
+                catch (Exception ex) { OnUi(() => Dialogs.Error("Sicherung fehlgeschlagen: " + ex.Message)); }
+            }) { IsBackground = true, Name = "sicherung" }.Start();
         }
 
         /// <summary>Spiele suchen und im Hintergrund prüfen (niedrigste Priorität, pausiert bei Vollbild).</summary>
@@ -177,6 +263,7 @@ namespace XpServer.Ui
         {
             if (e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); return; }
             Log.Line -= OnLine;
+            Ops.SaveBackup.Finished -= OnBackupFinished;
             base.OnFormClosing(e);
         }
 
@@ -200,6 +287,15 @@ namespace XpServer.Ui
             int tx = Pad + 46 + Math.Max(TextRenderer.MeasureText("xpserver", Theme.Title).Width, TextRenderer.MeasureText(SubTitle(), Theme.Ui).Width) + 24;
             _tabMain.SetBounds(tx, btnY, TabW, 24);
             _tabGames.SetBounds(tx + TabW + 6, btnY, TabW, 24);
+            _tabSave.SetBounds(tx + 2 * (TabW + 6), btnY, TabW, 24);
+            if (_tab == 2)
+            {
+                _dest.SetBounds(Pad, CardsY, w - 2 * Pad - 110 - 8, 46);
+                _pick.SetBounds(w - Pad - 110, CardsY + 16, 110, 29);
+                _go.SetBounds(Pad, SaveGoY, 240, 44);
+                Invalidate();
+                return;
+            }
             if (_tab == 1)
             {
                 int gy = CardsY + (BarH - 16) / 2 + 1;
@@ -266,6 +362,7 @@ namespace XpServer.Ui
             TextRenderer.DrawText(g, pillText, Theme.UiBold, new Point((int)pill.X + 19, (int)pill.Y + 4), sc, TextFormatFlags.NoPadding);
 
             if (_tab == 1) { PaintGames(g, w, h); Grip(g, w, h); return; }
+            if (_tab == 2) { PaintSave(g, w, h); Grip(g, w, h); return; }
 
             // Karten
             var up = DateTime.Now - Server.Started;
@@ -390,6 +487,45 @@ namespace XpServer.Ui
                 TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
         }
 
+        /// <summary>Sicherungs-Reiter: Zustand des Zielordners, Knopf, Liste der Spiele mit Ordner und letztem Zip.</summary>
+        void PaintSave(Graphics g, int w, int h)
+        {
+            int inner = w - 2 * Pad;
+            var flags = TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
+            TextRenderer.DrawText(g, _saveState, Theme.Ui, new Rectangle(Pad + 1, CardsY + 52, inner, 16), _saveTone, flags);
+            var run = Ops.SaveBackup.Running;
+            string side = run != null ? "Sicherung läuft (seit " + run.When.ToString("HH:mm:ss") + ") ..." :
+                "Ein Zip pro Spiel: <spiel>\\<spiel>_JJJJ-MM-TT_hh-mm-ss.zip, nur wenn sich etwas geändert hat.";
+            TextRenderer.DrawText(g, side, Theme.Ui, new Rectangle(Pad + 240 + 16, SaveGoY, inner - 256, 44), run != null ? Theme.Amber : Theme.Dim,
+                flags | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+            int top = SaveListY;
+            Surface(g, new RectangleF(Pad, top, inner, h - Foot - top));
+            int y = top + Inner;
+            TextRenderer.DrawText(g, "SPIELE MIT BEKANNTEN SPEICHERORTEN", Theme.Small, new Point(Pad + Inner, y), Theme.Dim, TextFormatFlags.NoPadding);
+            y += 20;
+            if (_saveRows == null)
+                TextRenderer.DrawText(g, "lese ...", Theme.Ui, new Point(Pad + Inner, y), Theme.Faint, TextFormatFlags.NoPadding);
+            else
+                foreach (var r in _saveRows)
+                {
+                    if (y + 34 > h - Foot) break;
+                    bool inst = r.Status == "installiert";
+                    Color c = inst ? Theme.Accent : r.Status == "fehler" ? Theme.Red : Theme.Faint;
+                    using (var b = new SolidBrush(c)) g.FillEllipse(b, Pad + Inner, y + 4, 7, 7);
+                    TextRenderer.DrawText(g, r.Title, Theme.UiBold, new Rectangle(Pad + Inner + 16, y, 260, 16), Theme.Text, flags);
+                    string last = r.Zip != null ? "zuletzt " + System.IO.Path.GetFileName(r.Zip) : inst ? "noch nicht gesichert" : r.Status;
+                    TextRenderer.DrawText(g, last, Theme.Ui, new Rectangle(w - Pad - Inner - 300, y, 300, 16), r.Zip != null ? Theme.Dim : Theme.Faint,
+                        flags | TextFormatFlags.Right);
+                    string sub = inst ? Program.Show(r.SaveDir) + "  ·  " + r.Files + " Dateien" + (r.Version != null ? "  ·  " + r.Version : "") :
+                                 r.Error ?? "";
+                    TextRenderer.DrawText(g, sub, Theme.Small, new Rectangle(Pad + Inner + 16, y + 17, inner - 2 * Inner - 16, 13), Theme.Faint,
+                        flags | TextFormatFlags.PathEllipsis);
+                    y += 36;
+                }
+            TextRenderer.DrawText(g, "Auch per Befehl: xpctl.py saves backup  ·  Speicherorte aus save-locations.json", Theme.Small,
+                new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint, TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
+        }
+
         /// <summary>Einheitliche Fläche: Panel-Farbe, 1 px Rand, Radius 8, auf halbe Pixel gesetzt.</summary>
         static void Surface(Graphics g, RectangleF r)
         {
@@ -407,6 +543,7 @@ namespace XpServer.Ui
     public class Chip : Control
     {
         public bool Toggle, Ghost;
+        public Font Face;                // eigene Schrift (z. B. großer Knopf), sonst Standard
         bool _on, _hover, _down;
         public bool On { get { return _on; } set { if (_on != value) { _on = value; Invalidate(); } } }
 
@@ -440,7 +577,7 @@ namespace XpServer.Ui
                 if (border.A > 0) using (var pen = new Pen(border)) g.DrawPath(pen, p);
             }
             string t = Text == "Sperren" && _on ? "Gesperrt" : Text;
-            TextRenderer.DrawText(g, t, Ghost ? Theme.Title : Theme.Ui, new Rectangle(0, Ghost ? -1 : 0, Width, Height), _on ? acc : Ghost && _hover ? Theme.Text : Theme.Mix(Theme.Text, Theme.Dim, Ghost ? 0.5f : 0f),
+            TextRenderer.DrawText(g, t, Face ?? (Ghost ? Theme.Title : Theme.Ui), new Rectangle(0, Ghost ? -1 : 0, Width, Height), _on ? acc : Ghost && _hover ? Theme.Text : Theme.Mix(Theme.Text, Theme.Dim, Ghost ? 0.5f : 0f),
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
         }
     }

@@ -48,11 +48,6 @@ class Remote(ABC):
         """Dateien (keine Ordner) direkt in ``folder``; leer, wenn es den Ordner nicht gibt."""
 
     @abstractmethod
-    def tree(self, folder: str) -> list[tuple[str, Entry]]:
-        """Alle Dateien in ``folder`` samt Unterordnern als (Pfad relativ zu ``folder`` mit ``\\``,
-        Eintrag); leer, wenn es den Ordner nicht gibt. Unvollständige Listen sind ein ``SaveError``."""
-
-    @abstractmethod
     def md5(self, path: str) -> str | None:
         """md5 einer Datei, None wenn es sie nicht gibt."""
 
