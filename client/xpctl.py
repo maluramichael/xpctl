@@ -1073,13 +1073,6 @@ def cmd_click(sock, args):
     return 0 if rpc(sock, req) else 1
 
 
-def cmd_press(sock, args):
-    r = rpc(sock, {"op": "press", "hwnd": int(args.hwnd, 0)})
-    if r:
-        print(f"ok ({r['how']})")
-    return 0 if r else 1
-
-
 def cmd_settext(sock, args):
     return 0 if rpc(sock, {"op": "settext", "hwnd": int(args.hwnd, 0), "text": args.text}) else 1
 
