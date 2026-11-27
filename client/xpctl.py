@@ -1569,6 +1569,10 @@ def cmd_install(sock, args):
     if r["status"] == "eula":
         print("Silent an der EULA-Seite abgebrochen (GOG), interaktiv mit Checkbox")
         return _install_eula(sock, args, r)
+    if r["status"] == "fehler" and r["kind"] == "inno" and r.get("exit") == 0 and r.get("files") and not r.get("tail"):
+        # altes Inno Setup (4.x) kennt /LOG nicht: kein Log, dann zählen Exit-Code und Dateien
+        print("ok (kein Inno-Log, altes Setup? Exit 0 und Dateien vorhanden)")
+        return 0
     if r["status"] != "ok":
         print("FEHLER, Log-Ende:")
         for l in r["tail"]:
