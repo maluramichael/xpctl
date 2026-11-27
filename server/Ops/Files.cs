@@ -518,6 +518,7 @@ namespace XpServer
             long total = 0;
             var start = DateTime.UtcNow;
             bool verify = r.Bool("verify");
+            bool force = r.Bool("force");   // schreibgeschützte Ziele überschreiben (Dateien von CD-Installationen)
             foreach (var pr in pairs)
             {
                 string s = pr[0], d = pr[1];
@@ -534,6 +535,11 @@ namespace XpServer
                     {
                         failed.Add(J.O("src", s, "error", PyRepr(s) + " and " + PyRepr(d) + " are the same file"));
                         continue;
+                    }
+                    if (force && File.Exists(d))
+                    {
+                        var at = File.GetAttributes(d);
+                        if ((at & FileAttributes.ReadOnly) != 0) File.SetAttributes(d, at & ~FileAttributes.ReadOnly);
                     }
                     File.Copy(s, d, true);
                     long size = new FileInfo(d).Length;

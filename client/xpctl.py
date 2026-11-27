@@ -1431,7 +1431,10 @@ def cmd_hash(sock, args):
 
 
 def cmd_copy(sock, args):
-    send_json(sock, {"op": "copy", "src": args.src, "dst": args.dst, "verify": args.verify})
+    req = {"op": "copy", "src": args.src, "dst": args.dst, "verify": args.verify}
+    if args.force:
+        req["force"] = True
+    send_json(sock, req)
     r = recv_json(sock)
     for f in r.get("failed") or []:
         print(f"NICHT kopiert: {f['src']}: {f['error']}", file=sys.stderr)
@@ -1974,6 +1977,7 @@ def main() -> int:
     p.add_argument("src")
     p.add_argument("dst", help=r"Ziel, mit \ am Ende = in den Ordner")
     p.add_argument("--verify", action="store_true", help="md5 Quelle/Ziel vergleichen")
+    p.add_argument("--force", action="store_true", help="schreibgeschützte Zieldateien überschreiben (CD-Installationen)")
     p.set_defaults(fn=cmd_copy)
 
     p = sub.add_parser("rm", help="löschen (ohne --force nur in rm_roots der Server-Konfiguration und auf den Desktops)")
