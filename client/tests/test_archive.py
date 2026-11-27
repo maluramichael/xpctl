@@ -104,6 +104,15 @@ class ArchiveTest(unittest.TestCase):
         self.assertEqual(s.status, "neu")
         self.assertIsNone(s.previous)
 
+    def test_broken_previous_zip_is_a_save_error(self):
+        r = FakeRemote(nfsu_files())
+        g = resolve(r, NfsUnderground)
+        (self.dest / "nfsu").mkdir()
+        (self.dest / "nfsu" / "nfsu_2026-01-01_00-00-00.zip").write_bytes(b"kein zip")
+        with self.assertRaises(SaveError) as e:
+            snapshot(g, self.dest, now=T1)
+        self.assertIn("kein lesbares Zip", str(e.exception))
+
     def test_empty_folder_no_zip(self):
         s = snapshot(resolve(FakeRemote({}), NfsUnderground), self.dest, now=T1)
         self.assertEqual(s.status, "leer")

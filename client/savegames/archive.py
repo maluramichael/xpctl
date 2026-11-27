@@ -18,6 +18,7 @@ import json
 import os
 import re
 import zipfile
+import zlib
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -52,8 +53,11 @@ def archives(dest_root: str | Path, game_id: str) -> list[Path]:
 
 def zip_md5s(path: Path) -> dict[str, str]:
     """md5 jedes Eintrags außer info.json."""
-    with zipfile.ZipFile(path) as z:
-        return {n: hashlib.md5(z.read(n)).hexdigest() for n in z.namelist() if n != INFO and not n.endswith("/")}
+    try:
+        with zipfile.ZipFile(path) as z:
+            return {n: hashlib.md5(z.read(n)).hexdigest() for n in z.namelist() if n != INFO and not n.endswith("/")}
+    except (zipfile.BadZipFile, zlib.error, EOFError) as e:
+        raise SaveError(f"{path} ist kein lesbares Zip ({e}). Prüfen und beiseitelegen, dann noch einmal.") from None
 
 
 def _zip_time(mtime: str, fallback: _dt.datetime) -> tuple:
