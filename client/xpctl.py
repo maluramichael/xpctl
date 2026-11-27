@@ -1565,6 +1565,10 @@ def cmd_install(sock, args):
     if r["status"] == "unbekannt":
         print(f"Typ {r['kind']}: {r['hint']}")
         return 1
+    if "exit" not in r:
+        # Zeitüberschreitung: Server schickt nur status, kind, cmd, detail
+        print(f"FEHLER: {r.get('detail', r['status'])}\n  {r.get('cmd', '')}")
+        return 1
     print(f"Typ {r['kind']}, {r['seconds']} s, Exit {r['exit']}, {r['files']} Dateien in {args.dir}, Log {r['log']}")
     if r["status"] == "eula":
         print("Silent an der EULA-Seite abgebrochen (GOG), interaktiv mit Checkbox")
