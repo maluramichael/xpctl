@@ -18,6 +18,7 @@
   xpctl.py temps [--source acpi,smart,nvidia,hwinfo,speedfan] [--json]   Temperaturen (xpserver.exe)
   xpctl.py saves [SPIEL [show|set|repair|backup] [PROFIL] [FELD=WERT ...]] [--json] [--dry-run]
                                                Spielstände und Profile (client/savegames)
+  xpctl.py saves backup [SPIEL ...] [--to ORDNER]   Spielstände als Zip sichern (<spiel>_JJJJ-MM-TT_hh-mm-ss.zip)
   xpctl.py reg KEY [--values] [--recurse N] [--json]   Registry-Schlüssel lesen (HKLM/HKCU/HKU/HKCR)
   xpctl.py settings [--only abschnitt,...] [--paths] [--json]   kuratierte Einstellungen
   xpctl.py productkey --out DATEI              XP-Produktschlüssel nur in Datei (chmod 600)
@@ -50,6 +51,7 @@
 Host: --host oder XPCTL_HOST (Pflicht), Port 5050 (XPCTL_PORT).
 Passwort: XPCTL_KEY oder die Datei aus XPCTL_KEY_FILE (Standard: Datei "key" im Ordner xpctl der Benutzer-Konfiguration).
 Screenshots: --out oder XPCTL_SHOTS (Ordner, sonst xpctl-shots im Home-Ordner).
+Spielstand-Zips: --to oder XPCTL_SAVES_ARCHIVE (Ordner, sonst xpctl-saves im Home-Ordner).
 GOG-Versionen per SSH (games --gog-ssh): XPCTL_GOG_SSH (SSH-Host), XPCTL_GOG_DIR (Ordner mit <slug>/setup_*.exe).
 Desktop-Gruppen: --map DATEI oder XPCTL_GROUPS (Zuordnungsdatei, Beispiel desktop-gruppen.example.txt).
 """
@@ -660,6 +662,27 @@ class XpRemote:
         return [savegames.Entry(e["path"].rsplit("\\", 1)[-1], e.get("size", 0), e.get("mtime", ""))
                 for e in r["entries"] if not e.get("dir") and not e.get("error")]
 
+    def tree(self, folder):
+        r = self._call({"op": "ls", "path": folder, "files_only": True, "recurse": -1, "limit": 50000})
+        if not r.get("ok"):
+            if str(r.get("error", "")).startswith("gibt es nicht"):
+                return []
+            raise savegames.SaveError(f"{folder}: {r.get('error')}")
+        if r.get("truncated"):
+            raise savegames.SaveError(f"{folder}: zu viele Dateien, Liste unvollständig")
+        pre = folder.rstrip("\\") + "\\"
+        out = []
+        for e in r["entries"]:
+            if e.get("dir"):
+                continue
+            if e.get("error"):
+                raise savegames.SaveError(f"{e['path']}: {e['error']}")
+            if not e["path"].lower().startswith(pre.lower()):
+                raise savegames.SaveError(f"{e['path']} liegt nicht in {folder}")
+            out.append((e["path"][len(pre):],
+                        savegames.Entry(e["path"].rsplit("\\", 1)[-1], e.get("size", 0), e.get("mtime", ""))))
+        return out
+
     def md5(self, path):
         r = self._call({"op": "hash", "paths": [path], "algo": "md5"})
         h = (r.get("hashes") or {}).get(path, "") if r.get("ok") else ""
@@ -681,7 +704,62 @@ class XpRemote:
         return None
 
 
-SAVES_BACKUP = r"C:\xpctl\backup\saves"
+SAVES_BACKUP = r"C:\xpctl\backup\saves"     # Sicherung vor set/repair, auf dem XP-Rechner
+
+
+def _saves_archive_dir(args):
+    return Path(args.to or os.environ.get("XPCTL_SAVES_ARCHIVE") or Path.home() / "xpctl-saves").expanduser()
+
+
+def _size(n):
+    return f"{n} B" if n < 1024 else f"{n / 1024:.1f} KB" if n < 1024 * 1024 else f"{n / 1024 / 1024:.1f} MB"
+
+
+def _saves_backup(rem, ids, dest, as_json):
+    """Zip pro installiertem Spiel (oder pro genanntem Spiel) nach dest/<spiel>/."""
+    try:
+        fams = [savegames.find_game(i) for i in ids] if ids else savegames.games()
+    except savegames.SaveError as e:
+        print(f"Fehler: {e}", file=sys.stderr)
+        return 2
+    rc, rows = 0, []
+    for fam in fams:
+        row = {"game": fam.id, "title": fam.title}
+        try:
+            g = savegames.resolve(rem, fam)
+            if g is None:
+                row["status"] = "nicht installiert"
+                rc = rc or (1 if ids else 0)
+            else:
+                s = savegames.archive.snapshot(g, dest)
+                row.update(status=s.status, zip=str(s.path or s.previous or ""), files=len(s.files),
+                           size=s.size, running=s.running, save_dir=g.save_dir())
+                if s.path:
+                    row["zip_size"] = s.path.stat().st_size
+        except (savegames.SaveError, OSError) as e:
+            row.update(status="fehler", error=str(e))
+            rc = 1
+        rows.append(row)
+    if as_json:
+        print(json.dumps({"dest": str(dest), "games": rows}, ensure_ascii=False, indent=1))
+        return rc
+    print(f"Ziel: {dest}")
+    for r in rows:
+        st = r["status"]
+        if st == "neu":
+            print(f"  {r['game']:<6} neu: {Path(r['zip']).name}  ({r['files']} Dateien, "
+                  f"{_size(r['size'])} -> {_size(r['zip_size'])})")
+        elif st == "unverändert":
+            print(f"  {r['game']:<6} unverändert seit {Path(r['zip']).name}")
+        elif st == "leer":
+            print(f"  {r['game']:<6} keine Dateien in {r['save_dir']}, kein Zip")
+        elif st == "fehler":
+            print(f"  {r['game']:<6} Fehler: {r['error']}", file=sys.stderr)
+        else:
+            print(f"  {r['game']:<6} {st}")
+        if r.get("running"):
+            print(f"         Achtung: {', '.join(r['running'])} lief beim Sichern, eine Datei kann halb geschrieben sein")
+    return rc
 
 
 def _saves_overview(rem, as_json):
@@ -745,6 +823,9 @@ def cmd_saves(sock, args):
     try:
         if not args.game:
             return _saves_overview(rem, args.json)
+        if args.game == "backup":                       # saves backup [SPIEL ...]
+            ids = [x for x in (args.action, args.profile, *args.assign) if x]
+            return _saves_backup(rem, ids, _saves_archive_dir(args), args.json)
         if args.game == "formats":
             return _saves_formats()
         fam = savegames.find_game(args.game)
@@ -771,9 +852,11 @@ def cmd_saves(sock, args):
                 print(f"\n  Hinweis: {note}")
             return 0
         if action == "backup":
-            bdir, done = g.backup([prof] if prof else None, SAVES_BACKUP)
-            print(f"{len(done)} Dateien gesichert nach {bdir}")
-            return 0
+            if prof:
+                print(f"backup sichert immer den ganzen Spielstand-Ordner, ohne Profil: xpctl.py saves {fam.id} backup",
+                      file=sys.stderr)
+                return 2
+            return _saves_backup(rem, [fam.id], _saves_archive_dir(args), args.json)
         if not prof:
             print(f"Profil fehlt. Vorhanden: {', '.join(g.profiles())}", file=sys.stderr)
             return 2
@@ -2080,7 +2163,7 @@ def main() -> int:
     p.set_defaults(fn=cmd_temps)
 
     p = sub.add_parser("saves", help="Spielstände und Profile lesen und ändern (pro Spiel und Exe-Version)")
-    p.add_argument("game", nargs="?", help="Spiel-Id (z. B. nfsu) oder 'formats'; ohne: Übersicht")
+    p.add_argument("game", nargs="?", help="Spiel-Id (z. B. nfsu), 'formats' oder 'backup'; ohne: Übersicht")
     p.add_argument("action", nargs="?", help="show, set, repair, backup (oder direkt ein Profilname)")
     p.add_argument("profile", nargs="?")
     p.add_argument("assign", nargs="*", metavar="FELD=WERT")
@@ -2089,6 +2172,8 @@ def main() -> int:
     p.add_argument("--force", action="store_true",
                    help="auch schreiben, wenn das Spiel läuft (Hauptmenü, Profil nicht geladen); "
                         "Spiele, die ihre Dateien selbst neu schreiben (NFSU), lehnen das ab")
+    p.add_argument("--to", metavar="ORDNER",
+                   help="Ziel für backup (sonst XPCTL_SAVES_ARCHIVE, sonst xpctl-saves im Home-Ordner)")
     p.set_defaults(fn=cmd_saves)
 
     p = sub.add_parser("reg", help="Registry-Schlüssel lesen (nur lesen)")

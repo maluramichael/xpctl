@@ -7,7 +7,7 @@
 
 Project page with the backstory and how it works: [malura.de/en/projects/xpctl](https://malura.de/en/projects/xpctl) (German: [malura.de/projekte/xpctl](https://malura.de/projekte/xpctl))
 
-Remote control for Windows XP machines from your terminal. Built for retro PCs: start programs and installers, transfer files, read and operate windows, read the registry and system settings, arrange desktop shortcuts, mount CD images, back up CDs, install drivers, identify game versions and edit save games.
+Remote control for Windows XP machines from your terminal. Built for retro PCs: start programs and installers, transfer files, read and operate windows, read the registry and system settings, arrange desktop shortcuts, mount CD images, back up CDs, install drivers, identify game versions, edit save games and back them up as zip files.
 
 | Live window: commands, errors, activity, log | Games tab: installed vs. latest version of every known game |
 |---|---|

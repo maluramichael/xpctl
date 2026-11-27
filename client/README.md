@@ -150,7 +150,7 @@ under `games` in `game-versions.json` and set `stand` in the header to today's d
     ./xpctl.py saves nfsu show Player [--json]        # all fields of a profile
     ./xpctl.py saves nfsu set Player MOTIONBLUR=0 RES=4 [--dry-run]
     ./xpctl.py saves nfsu repair Player               # recompute wrong checksums
-    ./xpctl.py saves nfsu backup [Player]             # back up profiles unchanged
+    ./xpctl.py saves backup [nfsu d2] [--to DIR]      # save folders of the installed games as zip files
     ./xpctl.py saves d2 show Hero                     # Diablo II: class, level, stats, gold, difficulty
     ./xpctl.py saves d2 set Hero strength=50 goldbank=100000 [--force]   # --force: game sits in the main menu
 
@@ -163,14 +163,29 @@ Writing is guarded:
 
 - only when the md5 of the game exe matches a tested version class. An unknown exe means read-only.
 - not while the game is running (it overwrites its files on exit).
-- the old files go to `C:\xpctl\backup\saves\<game>\<timestamp>` first. An existing backup is never overwritten.
+- the old files go to `C:\xpctl\backup\saves\<game>\<YYYY-MM-DD_HH-MM-SS>` on the XP machine first. An existing backup is never overwritten.
 - afterwards every file is read back and compared byte by byte.
 
 Tested in game: NFSU loads a `.cfg` changed by `set` (light streaks on). `Speed.exe` must not be running for this: the game rewrites its files itself when switching profiles, so `saves` refuses `--force` for NFSU. Each game class decides whether `--force` is allowed (`force_ok`, reason in `force_refusal`). Whether NFSU loads an `.opt` or `.ugd` fixed by `repair` has not been tested yet.
 
+**Backups as zip files.** `saves backup` reads the whole save folder of every installed game (subfolders included) and writes a plain zip file per game on the client:
+
+    ~/xpctl-saves/d2/d2_2026-11-27_21-19-11.zip
+    ~/xpctl-saves/nfsu/nfsu_2026-11-27_21-19-11.zip
+
+- target folder: `--to`, otherwise `XPCTL_SAVES_ARCHIVE`, otherwise `xpctl-saves` in the home folder.
+- file name `<game>_YYYY-MM-DD_HH-MM-SS.zip` in the client's local time: sorting by name is sorting by time, and there are no colons, so the names also work on Windows.
+- inside: the files with their path relative to the save folder, plus `info.json` (game, exe version, original save folder, time with UTC offset, size, change time and md5 of every file). Any zip tool opens it, so restoring by hand works without xpctl.
+- a new zip is only written when a file differs from the newest zip of that game, otherwise the game shows `unverändert`. An existing zip is never overwritten.
+- the zip is written as `.part`, tested (`testzip` and md5 of every entry), then renamed. Mode 600, because the NFSU online profile (`*0.pro`) holds login data.
+- the backup also works for unknown exe versions (read-only classes). If the game is running, the zip is still written with a warning, because a file may be half written.
+
+Not there yet: restore, removing old zips (keep daily/weekly/monthly), registry values as `.reg`, automatic runs.
+
 **New game or new version.** The code lives in `client/savegames/`:
 
 - `core.py`: the interfaces. `Remote` (file access on the XP machine), `SaveFile` (one file: `parse`, `serialize`, `fields`, `set`, `problems`, `repair`), `Profile`, `Game`.
+- `archive.py`: zip backups for `saves backup`.
 - `nfsu.py`: example of a game.
 
 A game is a base class derived from `Game` with `id`, `title`, `exe`, `locate` (install folder, usually from the registry), `save_dir`, `profiles` and `load`. Without a matching version class it may only read. Every tested exe gets a subclass whose name carries the version, with `version` and `exe_md5`:

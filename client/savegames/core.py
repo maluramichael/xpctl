@@ -19,7 +19,6 @@ import datetime as _dt
 import zlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Iterable
 
 
 class SaveError(Exception):
@@ -47,6 +46,11 @@ class Remote(ABC):
     @abstractmethod
     def files(self, folder: str) -> list[Entry]:
         """Dateien (keine Ordner) direkt in ``folder``; leer, wenn es den Ordner nicht gibt."""
+
+    @abstractmethod
+    def tree(self, folder: str) -> list[tuple[str, Entry]]:
+        """Alle Dateien in ``folder`` samt Unterordnern als (Pfad relativ zu ``folder`` mit ``\\``,
+        Eintrag); leer, wenn es den Ordner nicht gibt. Unvollständige Listen sind ein ``SaveError``."""
 
     @abstractmethod
     def md5(self, path: str) -> str | None:
@@ -292,31 +296,12 @@ class Game(ABC):
 
     def _fresh_backup_dir(self, backup_root: str) -> str:
         """Neuer, leerer Sicherungsordner. Eine vorhandene Sicherung wird nie überschrieben."""
-        base = join(backup_root, self.id, _dt.datetime.now().strftime("%Y%m%d-%H%M%S"))
+        base = join(backup_root, self.id, _dt.datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
         bdir, n = base, 1
         while self.remote.files(bdir):
             n += 1
             bdir = f"{base}-{n}"
         return bdir
-
-    def shared_files(self) -> list[str]:
-        """Dateinamen im Spielstand-Ordner, die zu allen Profilen gehören (z. B. eine Profilliste)."""
-        return []
-
-    def backup(self, names: Iterable[str] | None, backup_root: str) -> tuple[str, list[str]]:
-        """Kopiert Dateien unverändert in einen neuen Sicherungsordner. Ohne Namen: alles im
-        Spielstand-Ordner. Mit Namen: die Dateien dieser Profile plus ``shared_files``."""
-        bdir = self._fresh_backup_dir(backup_root)
-        folder = self.save_dir()
-        present = {e.name.lower(): e.name for e in self.remote.files(folder)}
-        if names is None:
-            wanted = sorted(present.values(), key=str.lower)
-        else:
-            wanted = [f.name for n in names for f in self.load(n).files]
-            wanted += [present[s.lower()] for s in self.shared_files() if s.lower() in present]
-        for name in dict.fromkeys(wanted):
-            self.remote.write(join(bdir, name), self.remote.read(join(folder, name)), mkdir=True)
-        return bdir, list(dict.fromkeys(wanted))
 
 
 def games() -> list[type[Game]]:

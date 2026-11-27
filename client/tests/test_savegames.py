@@ -69,6 +69,11 @@ class FakeRemote(Remote):
         return [Entry(real.rsplit("\\", 1)[1], len(v), "")
                 for k, (real, v) in self.fs.items() if k.startswith(pre) and "\\" not in k[len(pre):]]
 
+    def tree(self, folder):
+        pre = folder.lower().rstrip("\\") + "\\"
+        return [(real[len(pre):], Entry(real.rsplit("\\", 1)[1], len(v), "2026-11-23 17:20"))
+                for k, (real, v) in self.fs.items() if k.startswith(pre)]
+
     def md5(self, path):
         return self._md5 if path.lower().endswith("speed.exe") else None
 
@@ -216,23 +221,6 @@ class GameTest(unittest.TestCase):
         self.assertNotEqual(b1, b2)
         self.assertIn(b"MOTIONBLUR: 1", r.read(b1 + r"\Spieler.cfg"))   # erste Sicherung = Ursprung
         self.assertIn(b"MOTIONBLUR: 0", r.read(b2 + r"\Spieler.cfg"))
-
-    def test_backup_all_files_without_profile(self):
-        files = nfsu_files()
-        files[SAVES + r"\Spieler.cfg.alt"] = b"irgendwas"
-        r = FakeRemote(files)
-        g = resolve(r, NfsUnderground)
-        bdir, done = g.backup(None, r"C:\xpctl\backup\saves")
-        self.assertEqual(len(done), len(files))
-        self.assertIn("Spieler.cfg.alt", done)
-        self.assertIn("Spieler0.pro", done)     # Sicherung ist vollständig, angezeigt wird sie nicht
-        self.assertEqual(r.read(bdir + r"\Profiles.usr"), files[SAVES + r"\Profiles.usr"])
-
-    def test_backup_one_profile_includes_profile_list(self):
-        r = FakeRemote(nfsu_files())
-        g = resolve(r, NfsUnderground)
-        _, done = g.backup(["Gast"], r"C:\xpctl\backup\saves")
-        self.assertEqual(sorted(done), ["Gast.cfg", "Gast.opt", "Profiles.usr"])
 
     def test_store_refuses_while_running(self):
         r = FakeRemote(nfsu_files(), running=True)

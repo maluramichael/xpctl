@@ -227,9 +227,6 @@ class NfsUnderground(Game):
                 return d.rstrip("\\")
         return None
 
-    def shared_files(self) -> list[str]:
-        return ["Profiles.usr"]
-
     def save_dir(self) -> str:
         base = self.remote.reg(SHELL_FOLDERS, "Common AppData")
         if not base:
