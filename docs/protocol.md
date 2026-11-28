@@ -33,7 +33,7 @@ Ops that carry file contents run in three steps:
 
 `{"op": "savebackup", "games": ["d2"], "dest": "Z:\\saves", "list": false, "dialog": true}` backs up the save folders of the games in `client/save-locations.json` on the XP machine. All fields are optional: without `games` every known game, without `dest` the configured target folder (`savetarget`), `list` only shows what would be backed up, `dialog: false` shows no progress window.
 
-Errors that stop everything come back as `{"ok": false, "error": ...}`: unknown game, no target folder configured, target folder does not exist, a backup is already running. Otherwise `{"ok": true, "dest": ..., "list": ..., "games": [...]}` with one entry per game: `game`, `title`, `status` (`neu` = new zip, `unverändert` = unchanged, `leer` = empty, `nicht installiert` = not installed, `fehler` = error, with `list`: `installiert`), plus where known `save_dir`, `install_dir`, `version`, `zip` (new or newest zip), `files`, `size`, `zip_size`, `running` (game processes running during the backup) and `error`.
+Errors that stop everything come back as `{"ok": false, "error": ...}`: unknown game, no target folder configured, target folder does not exist, a backup is already running. Otherwise `{"ok": true, "dest": ..., "list": ..., "games": [...]}` with one entry per game: `game`, `title`, `status` (`neu` = new zip, `unverändert` = unchanged, `leer` = empty, `nicht installiert` = not installed, `fehler` = error, with `list`: `installiert`), plus where known `save_dir`, `install_dir`, `version`, `zip` (new or newest zip), `files`, `size`, `zip_size`, `running` (game processes running during the backup), `pruned` (old zips deleted because a game has more than 50, oldest first; v22) and `error`.
 
 ## saverestore (v22)
 

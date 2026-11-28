@@ -739,6 +739,10 @@ def _saves_backup(sock, ids, args):
                 rc = 1
         if g.get("running"):
             print(f"         Achtung: {', '.join(g['running'])} lief beim Sichern, eine Datei kann halb geschrieben sein")
+        if g.get("pruned"):
+            print(f"         {len(g['pruned'])} alte Zips gelöscht (höchstens 50 pro Spiel): {', '.join(g['pruned'])}")
+        if st == "neu" and g.get("error"):
+            print(f"         Achtung: {g['error']}", file=sys.stderr)
     return rc
 
 

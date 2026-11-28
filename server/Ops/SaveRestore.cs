@@ -69,8 +69,7 @@ namespace XpServer.Ops
             foreach (var f in Directory.GetFiles(dir, g.Id + "_*.zip"))
             {
                 var name = Path.GetFileName(f);
-                var m = Stamp.Match(name);
-                if (!m.Success || !string.Equals(m.Groups[1].Value, g.Id, StringComparison.OrdinalIgnoreCase)) continue;
+                if (!SaveZips.Is(name, g.Id)) continue;
                 var s = new Stand { Name = name, Path = f, Size = new FileInfo(f).Length };
                 string st = name.Substring(g.Id.Length + 1, 19);            // JJJJ-MM-TT_hh-mm-ss
                 s.When = st.Substring(0, 10) + " " + st.Substring(11).Replace('-', ':');
@@ -159,7 +158,7 @@ namespace XpServer.Ops
             {
                 // vorher sichern; ohne gültige Sicherung des jetzigen Stands wird nichts überschrieben
                 var pre = new GameResult { Id = g.Id, Title = g.Title };
-                try { One(g, pre, dest, false); }
+                try { One(g, pre, dest, false, stand.Path); }
                 catch (Exception e) { throw new OpError("Sicherung vor dem Zurückholen fehlgeschlagen (" + (e is OpError ? e.Message : e.GetType().Name + ": " + e.Message) + "). Nichts geändert."); }
                 if (pre.Status != "neu" && pre.Status != "unverändert" && pre.Status != "leer")
                     throw new OpError("Sicherung vor dem Zurückholen: " + pre.Status + (pre.Error != null ? " (" + pre.Error + ")" : "") + ". Nichts geändert.");

@@ -499,7 +499,7 @@ namespace XpServer.Ui
             TextRenderer.DrawText(g, _saveState, Theme.Ui, new Rectangle(Pad + 1, CardsY + 52, inner, 16), _saveTone, flags);
             var run = Ops.SaveBackup.Running;
             string side = run != null ? "Sicherung läuft (seit " + run.When.ToString("HH:mm:ss") + ") ..." :
-                "Ein Zip pro Spiel: <spiel>\\<spiel>_JJJJ-MM-TT_hh-mm-ss.zip, nur wenn sich etwas geändert hat.";
+                "Ein Zip pro Spiel: <spiel>\\<spiel>_JJJJ-MM-TT_hh-mm-ss.zip, nur wenn sich etwas geändert hat. Höchstens " + SaveZips.Keep + " pro Spiel, ältere werden gelöscht.";
             TextRenderer.DrawText(g, side, Theme.Ui, new Rectangle(Pad + 240 + 16, SaveGoY, inner - 256 - BackW - 16, 44), run != null ? Theme.Amber : Theme.Dim,
                 flags | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
             int top = SaveListY;

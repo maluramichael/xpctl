@@ -194,6 +194,7 @@ namespace XpServer.Ops
             public int Files;
             public long Size, ZipSize;
             public List<string> Running = new List<string>();
+            public List<string> Pruned = new List<string>();     // gelöschte alte Zips (Aufräumregel)
 
             public J ToJ()
             {
@@ -204,6 +205,7 @@ namespace XpServer.Ops
                 if (Zip != null) j["zip"] = Zip;
                 if (Status == "neu" || Status == "unverändert" || Status == "installiert") { j["files"] = Files; j["size"] = Size; }
                 if (Status == "neu") j["zip_size"] = ZipSize;
+                if (Pruned.Count > 0) j["pruned"] = new List<object>(Pruned.ConvertAll(x => (object)x));
                 if (Running.Count > 0) j["running"] = new List<object>(Running.ConvertAll(x => (object)x));
                 if (Error != null) j["error"] = Error;
                 return j;
@@ -284,21 +286,44 @@ namespace XpServer.Ops
             return job;
         }
 
-        static readonly Regex Stamp = new Regex(@"^(.+)_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.zip$", RegexOptions.IgnoreCase);
-
         /// <summary>Neuestes Zip dieses Spiels (strenger Name, .part und fremde Dateien zählen nicht).</summary>
         public static string Latest(string dir, string id)
         {
             if (!Directory.Exists(dir)) return null;
-            string best = null;
-            foreach (var f in Directory.GetFiles(dir, id + "_*.zip"))
+            var l = SaveZips.Of(Names(dir, id), id);
+            return l.Count == 0 ? null : Path.Combine(dir, l[l.Count - 1]);
+        }
+
+        static List<string> Names(string dir, string id)
+        {
+            var l = new List<string>();
+            foreach (var f in Directory.GetFiles(dir, id + "_*.zip")) l.Add(Path.GetFileName(f));
+            return l;
+        }
+
+        /// <summary>Ältere Zips über <see cref="SaveZips.Keep"/> löschen. Ein Fehler beim Löschen stoppt nichts,
+        /// er landet im Log und in GameResult.Error.</summary>
+        /// protect: dieses Zip nie löschen (der Stand, den ein Zurückholen gerade einspielt).
+        static void Prune(string dir, Loc g, GameResult r, string protect)
+        {
+            foreach (var n in SaveZips.ToPrune(Names(dir, g.Id), g.Id, SaveZips.Keep))
             {
-                var name = Path.GetFileName(f);
-                var m = Stamp.Match(name);
-                if (!m.Success || !string.Equals(m.Groups[1].Value, id, StringComparison.OrdinalIgnoreCase)) continue;
-                if (best == null || string.CompareOrdinal(name, Path.GetFileName(best)) > 0) best = f;
+                string p = Path.Combine(dir, n);
+                if (string.Equals(p, r.Zip, StringComparison.OrdinalIgnoreCase) || string.Equals(p, protect, StringComparison.OrdinalIgnoreCase)) continue;
+                try
+                {
+                    File.Delete(p);
+                    r.Pruned.Add(n);
+                }
+                catch (Exception e)
+                {
+                    r.Error = "altes Zip nicht gelöscht: " + n + " (" + e.Message + ")";
+                    Log.Write("  Sicherung " + g.Id + ": " + r.Error, LogKind.Error);
+                }
             }
-            return best;
+            if (r.Pruned.Count > 0)
+                Log.Write(string.Format("  Sicherung {0}: {1} alte Zips gelöscht (mehr als {2}), ältestes übrig: {3}", g.Id, r.Pruned.Count, SaveZips.Keep,
+                    Path.GetFileName(SaveZips.Of(Names(dir, g.Id), g.Id)[0])), LogKind.Info);
         }
 
         static byte[] ReadShared(string p)
@@ -328,7 +353,7 @@ namespace XpServer.Ops
             return (o < TimeSpan.Zero ? "-" : "+") + Math.Abs(o.Hours).ToString("00") + ":" + Math.Abs(o.Minutes).ToString("00");
         }
 
-        static void One(Loc g, GameResult r, string dest, bool listOnly)
+        static void One(Loc g, GameResult r, string dest, bool listOnly, string protect = null)
         {
             string install, save;
             Locate(g, out install, out save);
@@ -453,6 +478,7 @@ namespace XpServer.Ops
             }
             r.Zip = final;
             r.Status = "neu";
+            Prune(dir, g, r, protect);
             Log.Write(string.Format("  Sicherung {0}: {1} ({2} Dateien, {3} Byte)", g.Id, final, names.Count, r.ZipSize), LogKind.Info);
         }
 

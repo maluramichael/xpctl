@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <!-- Test für Core/Restore.cs und Core/Zip.cs, läuft mit dem dotnet SDK auf macOS/Linux/Windows:
+  <!-- Test für Core/Restore.cs, Core/SaveZips.cs und Core/Zip.cs, läuft mit dem dotnet SDK auf macOS/Linux/Windows:
        Aufruf: dotnet run, Projekt server/tests/restore -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -12,5 +12,6 @@
   <ItemGroup>
     <Compile Include="..\..\Core\Zip.cs" Link="Zip.cs" />
     <Compile Include="..\..\Core\Restore.cs" Link="Restore.cs" />
+    <Compile Include="..\..\Core\SaveZips.cs" Link="SaveZips.cs" />
   </ItemGroup>
 </Project>

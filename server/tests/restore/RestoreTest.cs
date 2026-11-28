@@ -8,6 +8,7 @@ using XpServer;
 /// Zurückholen eines Spielstand-Ordners aus einem Zip (Core/Restore.cs), mit dem echten Zip-Schreiber.
 /// Fälle: geänderte Datei, später dazugekommene Datei (muss weg), gelöschte Datei in einem Unterordner
 /// (kommt wieder), schreibgeschützte Datei, Probelauf ändert nichts, unsichere Namen werden abgelehnt.
+/// Dazu die Aufräumregel der Sicherung (Core/SaveZips.cs): höchstens 50 Zips pro Spiel.
 /// Exit 0 = alles gut.
 /// </summary>
 static class RestoreTest
@@ -96,6 +97,16 @@ static class RestoreTest
                 Directory.Delete(dir, true);
             }
         }
+        // Aufräumregel: neueste 50 je Spiel bleiben, fremde Dateien und andere Spiele zählen nicht
+        var names = new List<string> { "d2_2026-11-27_21-34-30.zip.part", "d2-notiz.zip", "d2x_2026-01-01_00-00-00.zip", "nfsu_2026-01-01_00-00-00.zip" };
+        for (int i = 0; i < 53; i++) names.Add("d2_2026-" + (1 + i / 28).ToString("00") + "-" + (1 + i % 28).ToString("00") + "_12-00-00.zip");
+        names.Reverse();                           // Reihenfolge vom Dateisystem ist beliebig
+        var prune = SaveZips.ToPrune(names, "d2", SaveZips.Keep);
+        Check(SaveZips.Keep == 50, "Keep ist 50");
+        Check(prune.Count == 3 && prune[0] == "d2_2026-01-01_12-00-00.zip" && prune[2] == "d2_2026-01-03_12-00-00.zip", "die 3 ältesten d2-Zips weg, sonst nichts");
+        Check(SaveZips.ToPrune(names, "nfsu", 50).Count == 0, "anderes Spiel: unter der Grenze, nichts weg");
+        Check(SaveZips.Of(names, "d2").Count == 53 && !SaveZips.Is("d2_2026-11-27_21-34-30.zip.part", "d2"), ".part und fremde Namen zählen nicht");
+
         Console.WriteLine(_fails == 0 ? "alles gut" : _fails + " Fehler");
         return _fails == 0 ? 0 : 1;
     }
