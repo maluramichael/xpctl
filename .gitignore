@@ -8,3 +8,5 @@ desktop-gruppen.txt
 server/bin/
 server/obj/
 server/dist/
+server/tests/restore/bin/
+server/tests/restore/obj/

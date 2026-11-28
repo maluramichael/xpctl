@@ -35,7 +35,14 @@ Ops that carry file contents run in three steps:
 
 Errors that stop everything come back as `{"ok": false, "error": ...}`: unknown game, no target folder configured, target folder does not exist, a backup is already running. Otherwise `{"ok": true, "dest": ..., "list": ..., "games": [...]}` with one entry per game: `game`, `title`, `status` (`neu` = new zip, `unverändert` = unchanged, `leer` = empty, `nicht installiert` = not installed, `fehler` = error, with `list`: `installiert`), plus where known `save_dir`, `install_dir`, `version`, `zip` (new or newest zip), `files`, `size`, `zip_size`, `running` (game processes running during the backup) and `error`.
 
+## saverestore (v22)
+
+`{"op": "saverestore", "game": "d2"}` lists the backups of one game in the target folder, newest first: `stands` with `name`, `path`, `when` (`YYYY-MM-DD hh:mm:ss`), `size`, `files` (`-1` if the zip is unreadable), plus `dest` and `save_dir`.
+
+`{"op": "saverestore", "game": "d2", "zip": "2026-11-27_21-34", "dry_run": false}` restores one backup. `zip` is the file name or the start of its time stamp and has to match exactly one zip. `dest` works as with `savebackup`. Order: the game must not be running, the zip is read and checked completely (CRC of every entry, safe names, `info.json` belongs to this game), then the current save folder is backed up like `savebackup` (if that fails, nothing changes), then the folder is set to the zip's content and compared byte by byte. Files that exist now but are not in the zip are deleted (they are in the backup taken just before). `dry_run: true` only reports what would change and backs up nothing.
+
+Answer: `game`, `title`, `zip`, `save_dir`, `dry_run`, `written` and `removed` (relative names), `same` (count of files already equal), `backup` (`status` and `zip` of the backup taken first), `verified`, and `zip_save_dir` if the zip was taken from a different folder. Errors as `{"ok": false, "error": ...}`; errors before writing end with "Nichts geändert.", errors after the backup name the backup zip.
+
 ## savetarget (v21)
 
 `{"op": "savetarget"}` returns `dest` (target folder or `null`), `exists`, `games` (ids from `save-locations.json`) and `db_stand`. `{"op": "savetarget", "set": "Z:\\saves"}` sets the folder first (absolute path with drive letter or UNC, the folder does not have to exist yet; `""` removes it).
-

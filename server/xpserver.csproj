@@ -18,6 +18,8 @@
     <ApplicationIcon>Ui\xpserver.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
+    <!-- Tests sind eigene Projekte (server/tests/restore), nicht Teil der Exe -->
+    <Compile Remove="tests\**" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />

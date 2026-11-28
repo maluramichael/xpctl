@@ -35,7 +35,7 @@ The "Sicherung" (backup) tab backs up save games. At the top is the target folde
 
 `xpctl saves backup` starts the same backup. The progress window then shows up in the bottom right corner without taking the focus, not on top of other windows, not at all while a program runs fullscreen, and closes itself 8 seconds after a successful run. Only one backup runs at a time; a second start (button or command) gets "es läuft schon eine Sicherung" (a backup is already running).
 
-The zips open in any zip tool, including the XP Explorer, so restoring by hand works without xpctl. Each zip contains the files with their path relative to the save folder and an `info.json` (game, exe version, original folders, time with UTC offset, size, change time and md5 per file). Before the final name the zip is written as `.part`, read back completely and checked (CRC of every entry).
+"Zurückholen ..." (restore) opens a list of the backups of one game. A dry run first shows how many files would be replaced or deleted, after confirming the current state is backed up and the save folder is set to the content of the chosen zip, then compared byte by byte. Refused while the game is running. The zips open in any zip tool, including the XP Explorer, so restoring by hand works without xpctl. Each zip contains the files with their path relative to the save folder and an `info.json` (game, exe version, original folders, time with UTC offset, size, change time and md5 per file). Before the final name the zip is written as `.part`, read back completely and checked (CRC of every entry).
 
 ![Backup tab](../docs/img/sicherung.png)
 
@@ -107,8 +107,8 @@ Without the script: `dotnet build -c Release`, result in `bin/Release/net35/xpse
 
 | Folder | Contents |
 |---|---|
-| `Core/` | startup and options (`Program.cs`), protocol, login and dispatch (`Net.cs`), JSON (`Json.cs`), zip writer and reader for .NET 3.5 (`Zip.cs`), registry access modeled on Python's `winreg` (`Reg.cs`), child processes without a console window (`Proc.cs`), configuration, log, watchdog and update (`Supervisor.cs`) |
-| `Ops/` | the commands, one file per group: `Core.cs` (ping, run, put, get, update), `Ui.cs`, `Inventory.cs`, `Shell.cs`, `Drives.cs`, `Files.cs`, `SaveBackup.cs` (save game backup) |
+| `Core/` | startup and options (`Program.cs`), protocol, login and dispatch (`Net.cs`), JSON (`Json.cs`), zip writer and reader for .NET 3.5 (`Zip.cs`), restoring a folder from a zip (`Restore.cs`, tested by `tests/restore`: `dotnet run --project server/tests/restore`), registry access modeled on Python's `winreg` (`Reg.cs`), child processes without a console window (`Proc.cs`), configuration, log, watchdog and update (`Supervisor.cs`) |
+| `Ops/` | the commands, one file per group: `Core.cs` (ping, run, put, get, update), `Ui.cs`, `Inventory.cs`, `Shell.cs`, `Drives.cs`, `Files.cs`, `SaveBackup.cs` and `SaveRestore.cs` (save game backup and restore) |
 | `Ui/` | tray icon, menu, live window, dialogs, first-run setup |
 | `tests/` | `parity.py` and test cases |
 | `legacy-python/` | the old Python server (reference for the port, no longer developed) |

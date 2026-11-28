@@ -175,12 +175,16 @@ Tested in game: NFSU loads a `.cfg` changed by `set` (light streaks on). `Speed.
     ./xpctl.py saves backup [--list]                  # all known games; --list only shows folders and newest zip
     ./xpctl.py saves backup d2 [--to 'D:\other']      # one game, other target for this run only
     ./xpctl.py saves backup --no-dialog               # no progress window on the XP machine
+    ./xpctl.py saves restore d2                       # list the backups of one game (xpserver v22)
+    ./xpctl.py saves restore d2 2026-11-27_21-34 --dry-run   # what would change
+    ./xpctl.py saves restore d2 2026-11-27_21-34      # restore that backup
 
 - the target folder has to exist, otherwise the backup stops with an error and writes nothing. Only the subfolder per game is created.
 - file name `<game>\<game>_YYYY-MM-DD_HH-MM-SS.zip` in the XP machine's local time: sorting by name is sorting by time, no colons.
 - inside: the whole save folder with subfolders and `info.json` (game, exe version, original folders, time with UTC offset, size, change time and md5 per file). Any zip tool opens it, the XP Explorer too.
 - a new zip is only written when a file differs from the newest zip of that game (CRC and size), otherwise `unverändert`. An existing zip is never overwritten.
 - the backup also works for unknown exe versions. If the game is running, the zip is still written with a warning.
+- restore (`saves restore`, or "Zurückholen ..." in the "Sicherung" tab): refused while the game runs. The current state is backed up first, then the save folder gets exactly the files of the zip: changed files are replaced, files added later (a new Diablo II character, for example) are deleted, and the folder is compared byte by byte with the zip afterwards. The time stamp may be shortened as long as it matches one zip.
 - where the games keep their saves: `client/save-locations.json` (embedded in xpserver when building; a newer file next to `xpserver.exe` wins). `tests/test_save_locations.py` checks that it finds the same folders as the classes in `savegames/`.
 
 Not there yet: restore, removing old zips (keep daily/weekly/monthly), registry values as `.reg`, automatic runs.

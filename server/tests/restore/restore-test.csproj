@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Test für Core/Restore.cs und Core/Zip.cs, läuft mit dem dotnet SDK auf macOS/Linux/Windows:
+       Aufruf: dotnet run, Projekt server/tests/restore -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\Core\Zip.cs" Link="Zip.cs" />
+    <Compile Include="..\..\Core\Restore.cs" Link="Restore.cs" />
+  </ItemGroup>
+</Project>

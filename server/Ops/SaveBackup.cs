@@ -20,7 +20,7 @@ namespace XpServer.Ops
     /// wird nur der Unterordner pro Spiel. Es läuft immer nur eine Sicherung (Knopf und Op teilen sich das).
     /// Die Arbeit hängt nicht an der Oberfläche: das Fenster hört nur auf <see cref="Job.Changed"/>.
     /// </summary>
-    public static class SaveBackup
+    public static partial class SaveBackup
     {
         const string UiKey = @"Software\xpctl\xpserver";
         const string TargetValue = "backup_dir";
@@ -395,7 +395,14 @@ namespace XpServer.Ops
             }
 
             r.Running = RunningOf(g);
+            Directory.CreateDirectory(dir);
             var when = DateTime.Now;
+            // gleiche Sekunde wie das letzte Zip (z. B. Zurückholen direkt nach einem Zurückholen): kurz warten
+            if (File.Exists(Path.Combine(dir, g.Id + "_" + when.ToString("yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture) + ".zip")))
+            {
+                Thread.Sleep(1100 - when.Millisecond);
+                when = DateTime.Now;
+            }
             var fileList = new List<object>();
             using (var h = MD5.Create())
                 for (int i = 0; i < names.Count; i++)
@@ -411,7 +418,6 @@ namespace XpServer.Ops
                 "running", new List<object>(r.Running.ConvertAll(x => (object)x)),
                 "files", fileList);
 
-            Directory.CreateDirectory(dir);
             string final = Path.Combine(dir, g.Id + "_" + when.ToString("yyyy-MM-dd_HH-mm-ss", CultureInfo.InvariantCulture) + ".zip");
             if (File.Exists(final)) throw new OpError(final + " gibt es schon (gleiche Sekunde, anderer Inhalt). In einer Sekunde noch einmal.");
             string part = final + ".part";

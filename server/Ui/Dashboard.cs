@@ -18,7 +18,7 @@ namespace XpServer.Ui
         readonly LogView _log = new LogView();
         readonly TextBox _filter = new TextBox();
         readonly Label _hint = new Label { Text = "Filter (Strg+F)", AutoSize = false };
-        readonly Chip _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _tabSave, _rescan, _pick, _go;
+        readonly Chip _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _tabSave, _rescan, _pick, _go, _back;
         readonly Field _dest = new Field("ZIELORDNER (Laufwerk oder Freigabe, muss es geben)", false);
         List<Ops.SaveBackup.GameResult> _saveRows;
         string _saveState = "";                     // Zustand des Zielordners, im Hintergrund geprüft
@@ -39,6 +39,7 @@ namespace XpServer.Ui
         static int BarY { get { return SparkY + SparkH + Gap; } }
         static int LogY { get { return BarY + BarH + Gap; } }
         static int SaveGoY { get { return CardsY + 46 + 28 + Gap; } }     // unter Feld und Zustandszeile
+        const int BackW = 130;                                             // Knopf Zurückholen
         static int SaveListY { get { return SaveGoY + 44 + Gap + 4; } }
         const int FilterW = 236, LockW = 80, ClearW = 110, ErrW = 86, LogInset = 4;
 
@@ -101,12 +102,14 @@ namespace XpServer.Ui
             _pick.Click += (s, e) => PickTarget();
             _go = new Chip("Spielstände sichern", true) { On = true, Visible = false, Face = Theme.Title };
             _go.Click += (s, e) => StartBackup();
+            _back = new Chip("Zurückholen ...", false) { Visible = false };
+            _back.Click += (s, e) => { SaveTarget(); using (var d = new RestoreDialog()) d.ShowDialog(this); LoadSave(); };
             _dest.Visible = false;
             _dest.Box.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; SaveTarget(); } };
             _dest.Box.Leave += (s, e) => SaveTarget();
             Ops.SaveBackup.Finished += OnBackupFinished;
 
-            Controls.AddRange(new Control[] { _hint, _log, _games, _filter, _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _tabSave, _rescan, _dest, _pick, _go });
+            Controls.AddRange(new Control[] { _hint, _log, _games, _filter, _errors, _lock, _clear, _close, _min, _tabMain, _tabGames, _tabSave, _rescan, _dest, _pick, _go, _back });
             _hint.BringToFront();
             _log.SetLines(Log.Snapshot());
             Log.Line += OnLine;
@@ -133,7 +136,7 @@ namespace XpServer.Ui
             _tab = t;
             _log.Visible = _errors.Visible = _lock.Visible = _clear.Visible = t == 0;
             _games.Visible = _rescan.Visible = t == 1;
-            _dest.Visible = _pick.Visible = _go.Visible = t == 2;
+            _dest.Visible = _pick.Visible = _go.Visible = _back.Visible = t == 2;
             _filter.Visible = t != 2;
             _filter.Text = _filters[t];
             UpdateHint();
@@ -293,6 +296,7 @@ namespace XpServer.Ui
                 _dest.SetBounds(Pad, CardsY, w - 2 * Pad - 110 - 8, 46);
                 _pick.SetBounds(w - Pad - 110, CardsY + 16, 110, 29);
                 _go.SetBounds(Pad, SaveGoY, 240, 44);
+                _back.SetBounds(w - Pad - BackW, SaveGoY + 7, BackW, 30);
                 Invalidate();
                 return;
             }
@@ -496,7 +500,7 @@ namespace XpServer.Ui
             var run = Ops.SaveBackup.Running;
             string side = run != null ? "Sicherung läuft (seit " + run.When.ToString("HH:mm:ss") + ") ..." :
                 "Ein Zip pro Spiel: <spiel>\\<spiel>_JJJJ-MM-TT_hh-mm-ss.zip, nur wenn sich etwas geändert hat.";
-            TextRenderer.DrawText(g, side, Theme.Ui, new Rectangle(Pad + 240 + 16, SaveGoY, inner - 256, 44), run != null ? Theme.Amber : Theme.Dim,
+            TextRenderer.DrawText(g, side, Theme.Ui, new Rectangle(Pad + 240 + 16, SaveGoY, inner - 256 - BackW - 16, 44), run != null ? Theme.Amber : Theme.Dim,
                 flags | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
             int top = SaveListY;
             Surface(g, new RectangleF(Pad, top, inner, h - Foot - top));
@@ -522,7 +526,7 @@ namespace XpServer.Ui
                         flags | TextFormatFlags.PathEllipsis);
                     y += 36;
                 }
-            TextRenderer.DrawText(g, "Auch per Befehl: xpctl.py saves backup  ·  Speicherorte aus save-locations.json", Theme.Small,
+            TextRenderer.DrawText(g, "Auch per Befehl: xpctl.py saves backup | restore  ·  Speicherorte aus save-locations.json", Theme.Small,
                 new Rectangle(Pad, h - Foot, inner - 20, Foot), Theme.Faint, TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis | TextFormatFlags.VerticalCenter);
         }
 
