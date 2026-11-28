@@ -73,7 +73,10 @@ static class RestoreTest
             var again = Restore.Apply(dir, files, null);
             Check(again.Written.Count == 0 && again.Removed.Count == 0 && again.Same.Count == 4, "zweiter Lauf ändert nichts");
 
-            foreach (var evil in new[] { "../x.d2s", "/etc/x", "C:/x", "a//b", "Europe/./x", "x.xpctl-restore" })
+            var left = Restore.Load(MakeZip(("Held.d2s", B("held")), ("Held.d2s.xpctl-restore", B("halb"))), out info);
+            Check(left.Count == 1 && left[0].Name == "Held.d2s", "liegengebliebene Zwischendatei im Zip wird übersprungen");
+
+            foreach (var evil in new[] { "../x.d2s", "/etc/x", "C:/x", "a//b", "Europe/./x" })
             {
                 bool refused = false;
                 try { Restore.Load(MakeZip((evil, B("böse"))), out info); } catch (IOException) { refused = true; }

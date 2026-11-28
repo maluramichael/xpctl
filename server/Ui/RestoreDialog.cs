@@ -43,6 +43,8 @@ namespace XpServer.Ui
 
         void Bg(Action a) { new System.Threading.Thread(() => a()) { IsBackground = true, Name = "zurückholen" }.Start(); }
 
+        static string N(int n, string one) { return n + " " + (n == 1 ? one : one + "en"); }
+
         void Say(string text, System.Drawing.Color c) { _state.Text = text; _state.ForeColor = c; }
 
         /// <summary>Sicherungen des gewählten Spiels lesen; done: Meldung danach statt der Anzahl.</summary>
@@ -89,7 +91,7 @@ namespace XpServer.Ui
                     if (err != null) { _busy = false; Say(err, Theme.Red); return; }
                     int w = dry.Changes.Written.Count, rm = dry.Changes.Removed.Count;
                     if (w == 0 && rm == 0) { _busy = false; Say("Der Ordner entspricht schon diesem Stand, nichts zu tun.", Theme.Accent); return; }
-                    string msg = g.Title + " auf " + st.When + " zurücksetzen? " + w + " Dateien ersetzen" + (rm > 0 ? ", " + rm + " löschen" : "") + ".";
+                    string msg = g.Title + " auf " + st.When + " zurücksetzen? " + N(w, "Datei") + " ersetzen" + (rm > 0 ? ", " + N(rm, "Datei") + " löschen" : "") + ".";
                     if (!Dialogs.Confirm("Zurückholen", msg)) { _busy = false; Say("Abgebrochen, nichts geändert.", Theme.Faint); return; }
                     Say("hole zurück ...", Theme.Amber);
                     Bg(() =>
@@ -101,7 +103,7 @@ namespace XpServer.Ui
                         {
                             _busy = false;
                             if (err2 != null) { Say(err2, Theme.Red); return; }
-                            ReadStands("Zurückgeholt und Byte für Byte geprüft: " + res.Changes.Written.Count + " ersetzt, " + res.Changes.Removed.Count + " gelöscht." +
+                            ReadStands("Zurückgeholt und Byte für Byte geprüft: " + N(res.Changes.Written.Count, "Datei") + " ersetzt, " + res.Changes.Removed.Count + " gelöscht." +
                                 (res.BackupZip != null ? " Stand vorher: " + System.IO.Path.GetFileName(res.BackupZip) : ""));
                         });
                     });

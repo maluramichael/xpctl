@@ -29,8 +29,9 @@ namespace XpServer
         }
 
         /// <summary>Zip vollständig lesen und prüfen (jeder Eintrag entpackt, CRC und Größe). Liefert die
-        /// Dateien ohne info.json; info bekommt deren Inhalt (null, wenn es fehlt). Wirft IOException bei
-        /// kaputtem Zip oder unsicherem Namen (absolut, Laufwerk, '..').</summary>
+        /// Dateien ohne info.json und ohne Zwischendateien (*.xpctl-restore); info bekommt den Inhalt von
+        /// info.json (null, wenn es fehlt). Wirft IOException bei kaputtem Zip oder unsicherem Namen
+        /// (absolut, Laufwerk, '..').</summary>
         public static List<File1> Load(byte[] zip, out byte[] info)
         {
             info = null;
@@ -39,6 +40,7 @@ namespace XpServer
             foreach (var e in Zip.List(zip))
             {
                 if (e.Name.EndsWith("/")) continue;              // Ordnereintrag (schreibt xpserver nicht, andere Packer schon)
+                if (e.Name.EndsWith(TempSuffix, StringComparison.OrdinalIgnoreCase)) continue;   // Rest eines abgebrochenen Zurückholens, mitgesichert
                 var data = Zip.Read(zip, e);
                 if (e.Name == InfoName) { info = data; continue; }
                 string n = SafeName(e.Name);
@@ -54,7 +56,7 @@ namespace XpServer
             n = (n ?? "").Replace('\\', '/');
             if (n.Length == 0 || n.StartsWith("/") || n.IndexOf(':') >= 0) throw new IOException("unsicherer Name im Zip: " + n);
             foreach (var part in n.Split('/'))
-                if (part.Length == 0 || part == "." || part == ".." || part.EndsWith(TempSuffix, StringComparison.OrdinalIgnoreCase))
+                if (part.Length == 0 || part == "." || part == "..")
                     throw new IOException("unsicherer Name im Zip: " + n);
             return n;
         }

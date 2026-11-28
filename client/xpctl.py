@@ -806,7 +806,7 @@ def _saves_restore(sock, gid, when, args):
         print(f"  {verb[0]:<11} {n}")
     for n in r["removed"]:
         print(f"  {verb[1]:<11} {n}  (nicht im Zip)")
-    print(f"  {r['same']} Dateien schon gleich" + ("" if r.get("dry_run") else ", Ordner Byte für Byte gleich dem Zip"))
+    print(f"  {r['same']} Datei{'' if r['same'] == 1 else 'en'} schon gleich" + ("" if r.get("dry_run") else ", Ordner Byte für Byte gleich dem Zip"))
     return 0
 
 
